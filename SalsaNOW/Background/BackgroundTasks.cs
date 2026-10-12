@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -450,13 +451,15 @@ namespace SalsaNOW
             catch (TaskCanceledException) { }
         }
 
+        private static readonly Regex LaunchOptionsPattern =
+            new Regex("\"LaunchOptions\"\\s+\"\\s*[^\"\\s]", RegexOptions.Compiled);
+
         public static Task StartBrickPreventionAsync(CancellationToken token)
         {
             // HOTFIX1: Continue execution even if something goes wrong (will be improved in the near future)
             try
             {
                 string userData = @"C:\Program Files (x86)\Steam\userdata";
-                string blackListed = "\"LaunchOptions\"";
 
                 if (!Directory.Exists(userData))
                     return Task.CompletedTask;
@@ -469,8 +472,8 @@ namespace SalsaNOW
                     NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName
                 };
 
-                FileSystemEventHandler handler = (s, e) => HandleFile(e.FullPath, blackListed);
-                RenamedEventHandler renameHandler = (s, e) => HandleFile(e.FullPath, blackListed);
+                FileSystemEventHandler handler = (s, e) => HandleFile(e.FullPath);
+                RenamedEventHandler renameHandler = (s, e) => HandleFile(e.FullPath);
 
                 watcher.Created += handler;
                 watcher.Changed += handler;
@@ -481,7 +484,7 @@ namespace SalsaNOW
                 // Initial scan (important)
                 foreach (var file in Directory.EnumerateFiles(userData, "localconfig.vdf", SearchOption.AllDirectories))
                 {
-                    HandleFile(file, blackListed);
+                    HandleFile(file);
                 }
 
                 // Keep alive until cancelled
@@ -504,7 +507,7 @@ namespace SalsaNOW
                 return Task.CompletedTask;
             }
         }
-        private static void HandleFile(string path, string blackListed)
+        private static void HandleFile(string path)
         {
             Task.Run(async () =>
             {
@@ -521,7 +524,7 @@ namespace SalsaNOW
                             content = await reader.ReadToEndAsync();
                         }
 
-                        if (content.Contains(blackListed))
+                        if (LaunchOptionsPattern.IsMatch(content))
                         {
                             File.Delete(path);
 
