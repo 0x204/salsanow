@@ -23,11 +23,16 @@
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.Management" />
     <Reference Include="System.Net.Http" />
+    <Reference Include="System.Net.Http.WebRequest" />
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Core\TrustedRoots.pem" LogicalName="SalsaNOW.TrustedRoots.pem" />
+    <ProjectReference Include="..\SalsaNOW.Core\SalsaNOW.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Net\TrustedRoots.pem" LogicalName="SalsaNOW.TrustedRoots.pem" />
   </ItemGroup>
 
 </Project>
