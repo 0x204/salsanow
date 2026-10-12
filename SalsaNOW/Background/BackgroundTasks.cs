@@ -579,7 +579,7 @@ namespace SalsaNOW
                     key.SetValue("DOTNET_ROOT", dotnetRoot, RegistryValueKind.String);
                     key.SetValue("POWERSHELL_ROOT", powershellRoot, RegistryValueKind.String);
 
-                    string path = key.GetValue("Path", "").ToString();
+                    string path = key.GetValue("Path", "", RegistryValueOptions.DoNotExpandEnvironmentNames).ToString();
                     path = AddPathIfMissing(path, dotnetRoot);
                     path = AddPathIfMissing(path, powershellRoot);
 
