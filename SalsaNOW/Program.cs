@@ -43,7 +43,7 @@ namespace SalsaNOW
             }
 
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
-            ServicePointManager.ServerCertificateValidationCallback += (sender, cert, chain, errors) => true;
+            ServicePointManager.ServerCertificateValidationCallback = CertificateValidation.Validate;
             ServicePointManager.DefaultConnectionLimit = 32;
             ServicePointManager.Expect100Continue = false;
             ServicePointManager.UseNagleAlgorithm = false;

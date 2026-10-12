@@ -104,6 +104,7 @@
     <Compile Include="Background\BackgroundTasks.cs" />
     <Compile Include="Background\FinalBackgroundTasks.cs" />
     <Compile Include="Background\SalsaNOWSettingsApply.cs" />
+    <Compile Include="Core\CertificateValidation.cs" />
     <Compile Include="Core\NativeMethods.cs" />
     <Compile Include="Core\SalsaLogger.cs" />
     <Compile Include="Core\SalsaSettings.cs" />
@@ -137,6 +138,11 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="SalsaNOWLimeIcon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Core\TrustedRoots.pem">
+      <LogicalName>SalsaNOW.TrustedRoots.pem</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.8">
