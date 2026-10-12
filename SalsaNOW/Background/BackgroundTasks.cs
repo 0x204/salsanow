@@ -31,7 +31,7 @@ namespace SalsaNOW
                     {
                         var runningProcs = Process.GetProcessesByName(processName);
 
-                        if (runningProcs.Length == 0) break;
+                        if (runningProcs.Length == 0) continue;
 
                         foreach (var proc in runningProcs)
                         {
