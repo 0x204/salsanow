@@ -350,24 +350,21 @@ namespace SalsaNOW
 
         private static void NotifyTheme()
         {
-            IntPtr result;
-            IntPtr broadcast = new IntPtr(0xFFFF);
-            SendNotifyMessage(broadcast, 0x001A, IntPtr.Zero, "ImmersiveColorSet");
-            SendMessageTimeout(broadcast, 0x001A, IntPtr.Zero, "ImmersiveColorSet", 0x0002, 500, out result);
+            NotifySettingChange(new IntPtr(0xFFFF), "ImmersiveColorSet");
 
             IntPtr tray = FindWindow("Shell_TrayWnd", null);
             if (tray != IntPtr.Zero)
-            {
-                SendNotifyMessage(tray, 0x001A, IntPtr.Zero, "ImmersiveColorSet");
-                SendMessageTimeout(tray, 0x001A, IntPtr.Zero, "ImmersiveColorSet", 0x0002, 500, out result);
-            }
+                NotifySettingChange(tray, "ImmersiveColorSet");
 
             IntPtr progman = FindWindow("Progman", null);
             if (progman != IntPtr.Zero)
-            {
-                SendNotifyMessage(progman, 0x001A, IntPtr.Zero, "ImmersiveColorSet");
-                SendMessageTimeout(progman, 0x001A, IntPtr.Zero, "ImmersiveColorSet", 0x0002, 500, out result);
-            }
+                NotifySettingChange(progman, "ImmersiveColorSet");
+        }
+
+        private static void NotifySettingChange(IntPtr window, string area)
+        {
+            IntPtr result;
+            SendMessageTimeout(window, 0x001A, IntPtr.Zero, area, 0x0002, 500, out result);
         }
 
         private static void ApplyTaskbar(SalsaNowSettingsFile settings)
@@ -933,9 +930,9 @@ namespace SalsaNOW
         {
             IntPtr tray = FindWindow("Shell_TrayWnd", null);
             if (tray != IntPtr.Zero)
-                SendNotifyMessage(tray, 0x001A, IntPtr.Zero, "TraySettings");
+                NotifySettingChange(tray, "TraySettings");
 
-            SendNotifyMessage(new IntPtr(0xFFFF), 0x001A, IntPtr.Zero, "TraySettings");
+            NotifySettingChange(new IntPtr(0xFFFF), "TraySettings");
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -967,9 +964,6 @@ namespace SalsaNOW
             uint flags,
             uint timeout,
             out IntPtr result);
-
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        private static extern bool SendNotifyMessage(IntPtr hWnd, uint msg, IntPtr wParam, string lParam);
 
         private static void RegisterOpenCommand(string keyPath, string exePath)
         {
