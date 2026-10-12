@@ -67,7 +67,7 @@ namespace SalsaNOW
 
                         string versionKey = GetVersionKey(app.version);
                         string versionMarkerFile = Path.Combine(appDir, ".version");
-                        bool alreadyExists = Directory.Exists(appDir);
+                        bool alreadyExists = System.IO.File.Exists(appZipExe);
                         bool hasNewerVersion = HasRemoteUpdate(versionMarkerFile, versionKey);
 
                         if (!alreadyExists || hasNewerVersion)
@@ -77,8 +77,7 @@ namespace SalsaNOW
                             else
                                 SalsaLogger.Info("Installing " + app.name);
 
-                            if (alreadyExists)
-                                SafeDeleteDirectory(appDir);
+                            SafeDeleteDirectory(appDir);
 
                             string zipPath = $"{appDir}.zip";
                             await webClient.DownloadFileTaskAsync(new Uri(app.url), zipPath);
@@ -175,8 +174,7 @@ namespace SalsaNOW
 
                         if (isArchive)
                         {
-                            if (isOpenShell || hasNewerVersion)
-                                SafeDeleteDirectory(appFolder);
+                            SafeDeleteDirectory(appFolder);
 
                             string zip = $"{appFolder}.zip";
                             if (!Directory.Exists(appFolder)) Directory.CreateDirectory(appFolder);
