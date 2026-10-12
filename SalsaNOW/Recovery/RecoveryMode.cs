@@ -110,10 +110,19 @@ namespace SalsaNOW
 
             string globalDirectory = "";
 
-            using (var wc = new WebClient())
+            try
             {
-                var dir = JsonConvert.DeserializeObject<System.Collections.Generic.List<SavePath>>(await wc.DownloadStringTaskAsync("https://salsanowfiles.work/jsons/directory.json"))[0];
-                globalDirectory = dir.directoryCreate;
+                using (var wc = new WebClient())
+                {
+                    var dir = JsonConvert.DeserializeObject<System.Collections.Generic.List<SavePath>>(await wc.DownloadStringTaskAsync("https://salsanowfiles.work/jsons/directory.json"))[0];
+                    globalDirectory = Path.GetFullPath(dir.directoryCreate);
+                }
+            }
+            catch (Exception ex)
+            {
+                SalsaLogger.Error("Could not resolve the SalsaNOW folder: " + ex.Message);
+                Thread.Sleep(3000);
+                return;
             }
 
             if (!Directory.Exists(globalDirectory))
@@ -125,12 +134,68 @@ namespace SalsaNOW
                 return;
             }
 
-            Directory.Delete(globalDirectory, true);
+            bool isDriveRoot = string.Equals(Path.GetPathRoot(globalDirectory), globalDirectory, StringComparison.OrdinalIgnoreCase);
+            if (isDriveRoot || Path.GetFileName(globalDirectory).IndexOf("Salsa", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                SalsaLogger.Error($"Refusing to delete '{globalDirectory}': it does not look like a SalsaNOW folder.");
+                Thread.Sleep(3000);
+                return;
+            }
+
+            Console.WriteLine($"Everything in {globalDirectory} will be permanently deleted.");
+            Console.Write("Press Y to continue or any other key to go back: ");
+            if (Console.ReadKey(true).Key != ConsoleKey.Y)
+                return;
+
+            Console.WriteLine();
+            Console.WriteLine("Deleting...");
+
+            string exePath = Process.GetCurrentProcess().MainModule.FileName;
+            try
+            {
+                DeleteDirectory(globalDirectory, exePath);
+            }
+            catch (Exception ex)
+            {
+                SalsaLogger.Error("Factory reset failed: " + ex.Message);
+                Thread.Sleep(5000);
+                return;
+            }
 
             Console.Clear();
 
-            Process.Start("cmd.exe", $"/c start \"\" \"{Process.GetCurrentProcess().MainModule.FileName}\"");
+            Process.Start("cmd.exe", $"/c start \"\" \"{exePath}\"");
             Environment.Exit(0);
+        }
+
+        private static void DeleteDirectory(string directory, string keepFile)
+        {
+            foreach (string file in Directory.GetFiles(directory))
+            {
+                if (string.Equals(file, keepFile, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                File.SetAttributes(file, FileAttributes.Normal);
+                File.Delete(file);
+            }
+
+            foreach (string subdirectory in Directory.GetDirectories(directory))
+            {
+                bool isLink = (File.GetAttributes(subdirectory) & FileAttributes.ReparsePoint) != 0;
+                if (!isLink && IsInside(keepFile, subdirectory))
+                    DeleteDirectory(subdirectory, keepFile);
+                else
+                    Directory.Delete(subdirectory, !isLink);
+            }
+
+            if (!IsInside(keepFile, directory))
+                Directory.Delete(directory, false);
+        }
+
+        private static bool IsInside(string path, string directory)
+        {
+            string prefix = directory.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            return path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
         }
 
         static async Task RestoreShortcuts()
