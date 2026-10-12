@@ -137,7 +137,7 @@ namespace SalsaNOW
         {
             Console.WriteLine("Restore shortcuts selected.");
 
-            const string jsonUrl = "https://salsanowfiles.work/jsons/apps.json";
+            const string jsonUrl = "https://salsanowfiles.work/jsons/appsV2.json";
 
             try
             {
