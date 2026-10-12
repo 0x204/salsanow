@@ -69,6 +69,12 @@ public sealed class UserSettings
 
     [JsonProperty("persistUserFolders")]
     public bool? PersistUserFolders { get; set; }
+
+    [JsonProperty("disabledSilentApps")]
+    public List<string>? DisabledSilentApps { get; set; }
+
+    [JsonProperty("ctrlWinApp")]
+    public string? CtrlWinApp { get; set; }
 }
 
 public sealed class FileAssociation

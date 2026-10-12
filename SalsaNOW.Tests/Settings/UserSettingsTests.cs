@@ -48,17 +48,22 @@ public class UserSettingsTests
     }
 
     [Fact]
-    public void ParsesFolderOption()
+    public void ParsesFolderAndSilentAppOptions()
     {
         const string json = """
             {
-              "persistUserFolders": false
+              "persistUserFolders": false,
+              "disabledSilentApps": [ "CtrlTab", "WindowsMenuToggle" ],
+              "ctrlWinApp": "I:\\Apps\\Flow Launcher\\Flow.Launcher.exe"
             }
             """;
 
         UserSettings settings = JsonConfig.Parse<UserSettings>(json);
 
         Assert.False(settings.PersistUserFolders);
+        string[] expected = ["CtrlTab", "WindowsMenuToggle"];
+        Assert.Equal(expected, settings.DisabledSilentApps);
+        Assert.Equal(@"I:\Apps\Flow Launcher\Flow.Launcher.exe", settings.CtrlWinApp);
     }
 
     [Fact]
@@ -71,5 +76,7 @@ public class UserSettingsTests
         Assert.Null(settings.Associations);
         Assert.False(settings.AccentSourceAutomatic);
         Assert.Null(settings.PersistUserFolders);
+        Assert.Null(settings.DisabledSilentApps);
+        Assert.Null(settings.CtrlWinApp);
     }
 }

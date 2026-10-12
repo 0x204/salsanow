@@ -27,6 +27,13 @@ internal static class SalsaSession
         if (settings?.PersistUserFolders != false)
             UserFolders.MoveToPersistentDrive(paths);
 
+        var disabledSilentApps = new List<string>(settings?.DisabledSilentApps?.Where(name => !string.IsNullOrWhiteSpace(name)) ?? []);
+        if (settings?.CtrlWinApp is { } ctrlWinApp && !string.IsNullOrWhiteSpace(ctrlWinApp))
+        {
+            CtrlWinHotkey.Start(ctrlWinApp);
+            disabledSilentApps.Add(CtrlWinHotkey.DefaultApp);
+        }
+
         var config = new RemoteConfig(paths.ConfigCache);
 
         BackgroundJobs.Start("Environment setup", () => EnvironmentVariables.Configure(paths));
@@ -42,7 +49,7 @@ internal static class SalsaSession
         await Task.WhenAll(
             RunLoggedAsync("Desktop setup", () => new DesktopInstaller(paths, config, bingWallpaper: settings?.BingWallpaper == true).InstallAsync(cancellationToken)),
             RunLoggedAsync("App install", () => new AppInstaller(paths, config, options.CustomAppsJson).InstallAsync(cancellationToken)),
-            RunLoggedAsync("Silent app install", () => new SilentAppInstaller(paths, config).InstallAsync(cancellationToken)),
+            RunLoggedAsync("Silent app install", () => new SilentAppInstaller(paths, config, disabledSilentApps).InstallAsync(cancellationToken)),
             RunLoggedAsync("Steam setup", () => new SteamBootstrap(paths, silentLaunch: settings?.SteamSilentLaunch == true, steamInput: settings?.SteamInput == true).RunAsync(cancellationToken)));
 
         await new DesktopFinalizer(paths, new ShellSettings(paths, settingsFile)).RunAsync(cancellationToken);

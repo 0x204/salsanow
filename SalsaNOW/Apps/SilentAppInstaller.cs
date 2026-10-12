@@ -6,7 +6,7 @@ using SalsaNOW.Net;
 
 namespace SalsaNOW.Apps;
 
-internal sealed class SilentAppInstaller(SalsaPaths paths, RemoteConfig config)
+internal sealed class SilentAppInstaller(SalsaPaths paths, RemoteConfig config, IReadOnlyCollection<string> disabledApps)
 {
     public async Task InstallAsync(CancellationToken cancellationToken)
     {
@@ -24,7 +24,16 @@ internal sealed class SilentAppInstaller(SalsaPaths paths, RemoteConfig config)
         }
 
         await RemoveRetiredAppsAsync(apps);
-        await Task.WhenAll(apps.Select(app => InstallAsync(app, cancellationToken)));
+        await Task.WhenAll(apps.Where(IsEnabled).Select(app => InstallAsync(app, cancellationToken)));
+    }
+
+    private bool IsEnabled(SilentAppEntry app)
+    {
+        if (!disabledApps.Any(app.IsNamed))
+            return true;
+
+        Log.Info($"Silent app {app.Name} is turned off in SalsaNOWSettings.json.");
+        return false;
     }
 
     private async Task RemoveRetiredAppsAsync(List<SilentAppEntry> apps)
