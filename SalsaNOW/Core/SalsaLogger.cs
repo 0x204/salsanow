@@ -8,6 +8,7 @@ namespace SalsaNOW
 {
     internal static class SalsaLogger
     {
+        private static readonly object Sync = new object();
         private static string _logFilePath;
 
         // Initializes the local log file in the global directory
@@ -28,15 +29,18 @@ namespace SalsaNOW
         // Outputs formatted messages to the console and appends them to the local log file
         private static void Write(string prefix, string message, ConsoleColor color)
         {
-            var original = Console.ForegroundColor;
-            Console.ForegroundColor = color;
-            Console.WriteLine($"{prefix} {message}");
-            Console.ForegroundColor = original;
-
-            if (!string.IsNullOrEmpty(_logFilePath))
+            lock (Sync)
             {
-                try { File.AppendAllText(_logFilePath, $"[{DateTime.Now:HH:mm:ss}] {prefix} {message}\n"); }
-                catch { } 
+                var original = Console.ForegroundColor;
+                Console.ForegroundColor = color;
+                Console.WriteLine($"{prefix} {message}");
+                Console.ForegroundColor = original;
+
+                if (!string.IsNullOrEmpty(_logFilePath))
+                {
+                    try { File.AppendAllText(_logFilePath, $"[{DateTime.Now:HH:mm:ss}] {prefix} {message}\n"); }
+                    catch { }
+                }
             }
         }
 
@@ -54,9 +58,12 @@ namespace SalsaNOW
                     // 1. Construct the crash report payload
                     string logContent = $"--- SalsaNOW CRASH REPORT ---\nTime: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\nError: {fatalErrorMessage}\n\n";
                     
-                    if (!string.IsNullOrEmpty(_logFilePath) && File.Exists(_logFilePath))
+                    lock (Sync)
                     {
-                        logContent += "--- LOG HISTORY ---\n" + File.ReadAllText(_logFilePath);
+                        if (!string.IsNullOrEmpty(_logFilePath) && File.Exists(_logFilePath))
+                        {
+                            logContent += "--- LOG HISTORY ---\n" + File.ReadAllText(_logFilePath);
+                        }
                     }
 
                     // 2. Upload to paste.rs
