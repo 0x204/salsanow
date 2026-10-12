@@ -1,6 +1,7 @@
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -531,7 +532,13 @@ namespace SalsaNOW
                             SalsaLogger.Error("STEAM LAUNCH OPTIONS DETECTED. Session terminated.");
 
                             foreach (var p in Process.GetProcessesByName("steam"))
-                                p.Kill();
+                            {
+                                using (p)
+                                {
+                                    try { p.Kill(); }
+                                    catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException) { }
+                                }
+                            }
                         }
 
                         return;

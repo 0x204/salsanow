@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -97,8 +98,14 @@ namespace SalsaNOW
                 }
 
                 // Close existing shells before attempting updates
-                var processes = Process.GetProcessesByName("CustomExplorer");
-                foreach (var p in processes) p.Kill();
+                foreach (var p in Process.GetProcessesByName("CustomExplorer"))
+                {
+                    using (p)
+                    {
+                        try { p.Kill(); }
+                        catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException) { }
+                    }
+                }
 
                 foreach (var desktop in desktopInfo)
                 {
