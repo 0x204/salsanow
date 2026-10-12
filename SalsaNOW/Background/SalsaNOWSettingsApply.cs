@@ -661,7 +661,7 @@ namespace SalsaNOW
                     continue;
 
                 RecentLaunches[item.Key] = now;
-                SalsaLogger.Info("Intercepted Edge URL: " + item.Key);
+                SalsaLogger.Info("Intercepted Edge URL to " + HostOf(item.Key));
                 LaunchBrowser(browserPath, item.Key);
             }
         }
@@ -681,6 +681,12 @@ namespace SalsaNOW
             }
 
             return null;
+        }
+
+        private static string HostOf(string url)
+        {
+            Uri uri;
+            return Uri.TryCreate(url, UriKind.Absolute, out uri) ? uri.Host : "an unparsable address";
         }
 
         private static void KillProcess(int processId)
