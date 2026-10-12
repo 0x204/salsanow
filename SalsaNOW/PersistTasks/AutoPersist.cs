@@ -44,16 +44,11 @@ namespace SalsaNOW
                     {
                         SalsaLogger.Info("Restoring registry: " + entry.Key);
 
-                        using (Process process = Process.Start(new ProcessStartInfo
+                        int exitCode = RunReg($"import \"{file}\"");
+                        if (exitCode != 0)
                         {
-                            FileName = "reg.exe",
-                            Arguments = $"import \"{file}\"",
-                            UseShellExecute = false,
-                            CreateNoWindow = true,
-                            WindowStyle = ProcessWindowStyle.Hidden
-                        }))
-                        {
-                            process?.WaitForExit();
+                            File.Copy(file, file + ".failed", true);
+                            SalsaLogger.Error($"Failed to restore {entry.Key} (reg.exe exit code {exitCode}). The backup was kept as {entry.File}.failed.");
                         }
                     }
                     catch (Exception ex)
@@ -65,49 +60,119 @@ namespace SalsaNOW
                 SalsaLogger.Info("Initial registry restore complete.");
 
                 // Backup loop
+                var failingKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 while (!token.IsCancellationRequested)
                 {
+                    foreach (RegistryEntry entry in config.RegistryKeys)
+                        BackupKey(entry, backupDir, failingKeys);
+
                     try
                     {
-                        foreach (RegistryEntry entry in config.RegistryKeys)
-                        {
-                            try
-                            {
-                                string file = Path.Combine(backupDir, entry.File);
-
-                                using (Process process = Process.Start(new ProcessStartInfo
-                                {
-                                    FileName = "reg.exe",
-                                    Arguments = $"export \"{entry.Key}\" \"{file}\" /y",
-                                    UseShellExecute = false,
-                                    CreateNoWindow = true,
-                                    WindowStyle = ProcessWindowStyle.Hidden
-                                }))
-                                {
-                                    process?.WaitForExit();
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                SalsaLogger.Error("Failed to back up " + entry.Key + ": " + ex.Message);
-                            }
-                        }
-
-                        await Task.Delay(
-                            TimeSpan.FromSeconds(config.BackupIntervalSeconds),
-                            token);
+                        await Task.Delay(TimeSpan.FromSeconds(config.BackupIntervalSeconds), token);
                     }
                     catch (TaskCanceledException)
                     {
                         break;
                     }
-                    catch (Exception ex)
-                    {
-                        SalsaLogger.Error("Registry backup loop failed: " + ex.Message);
+                }
+            }
+        }
 
-                        await Task.Delay(TimeSpan.FromSeconds(5), token);
+        private static void BackupKey(RegistryEntry entry, string backupDir, HashSet<string> failingKeys)
+        {
+            string file = Path.Combine(backupDir, entry.File);
+            string temp = file + ".tmp";
+
+            try
+            {
+                int exitCode = RunReg($"export \"{entry.Key}\" \"{temp}\" /y");
+                if (exitCode != 0 || !File.Exists(temp))
+                {
+                    if (failingKeys.Add(entry.Key))
+                        SalsaLogger.Warn($"Could not back up {entry.Key} (reg.exe exit code {exitCode}).");
+                    return;
+                }
+
+                failingKeys.Remove(entry.Key);
+
+                if (FilesEqual(temp, file))
+                    return;
+
+                if (File.Exists(file))
+                    ReplaceFile(temp, file);
+                else
+                    File.Move(temp, file);
+            }
+            catch (Exception ex)
+            {
+                if (failingKeys.Add(entry.Key))
+                    SalsaLogger.Error("Failed to back up " + entry.Key + ": " + ex.Message);
+            }
+            finally
+            {
+                try { if (File.Exists(temp)) File.Delete(temp); } catch { }
+            }
+        }
+
+        private static void ReplaceFile(string source, string destination)
+        {
+            try
+            {
+                File.Replace(source, destination, null);
+            }
+            catch (IOException)
+            {
+                File.Copy(source, destination, true);
+            }
+        }
+
+        private static bool FilesEqual(string left, string right)
+        {
+            if (!File.Exists(right) || new FileInfo(left).Length != new FileInfo(right).Length)
+                return false;
+
+            const int BufferSize = 81920;
+            using (var a = File.OpenRead(left))
+            using (var b = File.OpenRead(right))
+            {
+                var bufferA = new byte[BufferSize];
+                var bufferB = new byte[BufferSize];
+                int read;
+                while ((read = a.Read(bufferA, 0, BufferSize)) > 0)
+                {
+                    int offset = 0;
+                    while (offset < read)
+                    {
+                        int readB = b.Read(bufferB, offset, read - offset);
+                        if (readB == 0)
+                            return false;
+                        offset += readB;
+                    }
+
+                    for (int i = 0; i < read; i++)
+                    {
+                        if (bufferA[i] != bufferB[i])
+                            return false;
                     }
                 }
+            }
+
+            return true;
+        }
+
+        private static int RunReg(string arguments)
+        {
+            using (Process process = Process.Start(new ProcessStartInfo
+            {
+                FileName = "reg.exe",
+                Arguments = arguments,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            }))
+            {
+                process.WaitForExit();
+                return process.ExitCode;
             }
         }
 
@@ -139,17 +204,9 @@ namespace SalsaNOW
                         entry.Url,
                         regFile);
 
-                    using (Process process = Process.Start(
-                        new ProcessStartInfo
-                        {
-                            FileName = "reg.exe",
-                            Arguments = "import \"" + regFile + "\"",
-                            UseShellExecute = false,
-                            CreateNoWindow = true
-                        }))
-                    {
-                        process?.WaitForExit();
-                    }
+                    int exitCode = RunReg("import \"" + regFile + "\"");
+                    if (exitCode != 0)
+                        SalsaLogger.Error($"Failed to import {entry.File} (reg.exe exit code {exitCode}).");
                 }
             }
         }
