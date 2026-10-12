@@ -294,15 +294,18 @@ namespace SalsaNOW
             string menuXml = Path.Combine(globalDirectory, "SilentApps", "Open-Shell", "Menu Settings.xml");
             if (File.Exists(menuXml))
             {
-                Process.Start(new ProcessStartInfo
+                using (Process import = Process.Start(new ProcessStartInfo
                 {
                     FileName = startMenu,
                     Arguments = "-xml \"" + menuXml + "\"",
                     UseShellExecute = true
-                });
+                }))
+                {
+                    import?.WaitForExit(10000);
+                }
             }
 
-            Process.Start(startMenu);
+            using (Process.Start(startMenu)) { }
             SalsaLogger.Info("Open-Shell started.");
         }
 
