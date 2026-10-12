@@ -1,5 +1,6 @@
 using SalsaNOW.Apps;
 using SalsaNOW.Configuration;
+using SalsaNOW.Core.Apps;
 using SalsaNOW.Infrastructure;
 using SalsaNOW.Shell;
 using SalsaNOW.Shortcuts;
@@ -7,8 +8,12 @@ using SalsaNOW.Steam;
 
 namespace SalsaNOW.Desktop;
 
-internal sealed class DesktopFinalizer(SalsaPaths paths, ShellSettings shellSettings)
+internal sealed class DesktopFinalizer(SalsaPaths paths, ShellSettings shellSettings, IReadOnlyCollection<string> disabledSilentApps)
 {
+    private static readonly SilentAppEntry OpenShell = new() { Name = "Open-Shell", FileName = "StartMenu", FileExtension = "exe" };
+    private static readonly SilentAppEntry ChangeWallpaper = new() { Name = "Salsa Change Wallpaper", FileName = "SalsaChangeWallpaper", FileExtension = "exe" };
+    private static readonly SilentAppEntry RestartSteam = new() { Name = "RestartSteam", FileName = "RestartSteam", FileExtension = "exe" };
+
     private static readonly string[] OpenShellPinnedShortcuts =
     [
         "7-Zip.lnk",
@@ -65,20 +70,27 @@ internal sealed class DesktopFinalizer(SalsaPaths paths, ShellSettings shellSett
 
     private void AddDesktopMenuCommands()
     {
-        AddDesktopMenuCommand("ChangeWallpaper", "Change Wallpaper (USE THIS)", Path.Combine(paths.SilentApps, "SalsaChangeWallpaper.exe"));
-        AddDesktopMenuCommand("RestartSteam", "Restart Steam", Path.Combine(paths.SilentApps, "RestartSteam.exe"));
+        AddDesktopMenuCommand("ChangeWallpaper", "Change Wallpaper (USE THIS)", ChangeWallpaper);
+        AddDesktopMenuCommand("RestartSteam", "Restart Steam", RestartSteam);
         Log.Info("Desktop context menus applied.");
     }
 
-    private static void AddDesktopMenuCommand(string keyName, string title, string executable)
+    private void AddDesktopMenuCommand(string keyName, string title, SilentAppEntry app)
     {
+        string keyPath = @"Software\Classes\Directory\Background\shell\" + keyName;
+        if (IsDisabled(app))
+        {
+            UserRegistry.DeleteTree(keyPath);
+            return;
+        }
+
+        string executable = Path.Combine(paths.SilentApps, app.ExecutableName);
         if (!File.Exists(executable))
         {
             Log.Warn($"Skipping context menu {title}, missing: {executable}");
             return;
         }
 
-        string keyPath = @"Software\Classes\Directory\Background\shell\" + keyName;
         UserRegistry.SetString(keyPath, "MUIVerb", title);
         UserRegistry.SetString(keyPath, "Position", "Bottom");
         UserRegistry.SetString(keyPath + @"\command", "", $"\"{executable}\"");
@@ -126,9 +138,14 @@ internal sealed class DesktopFinalizer(SalsaPaths paths, ShellSettings shellSett
             Log.Info("Removed Explorer++ registry key.");
     }
 
+    private bool IsDisabled(SilentAppEntry app) => disabledSilentApps.Any(app.IsNamed);
+
     private void StartOpenShell()
     {
-        string startMenu = Path.Combine(paths.OpenShell, "StartMenu.exe");
+        if (IsDisabled(OpenShell))
+            return;
+
+        string startMenu = Path.Combine(paths.OpenShell, OpenShell.ExecutableName);
         if (!File.Exists(startMenu))
         {
             Log.Warn("Open-Shell StartMenu.exe not found.");

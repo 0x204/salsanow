@@ -26,7 +26,7 @@ internal static class UserFolders
         foreach (string library in Libraries)
             Redirect(Path.Combine(profile, library), Path.Combine(drive, library));
 
-        MoveTemp(Path.Combine(drive, "Temp"));
+        MoveTemp(paths.Temp);
     }
 
     private static void Redirect(string folder, string target)
@@ -35,7 +35,7 @@ internal static class UserFolders
         {
             Directory.CreateDirectory(target);
             if (Directory.Exists(folder) && !FileSystem.IsLink(folder))
-                FileSystem.CopyMissingFiles(folder, target);
+                WarnAboutKeptCopies(folder, FileSystem.CopyMissingFiles(folder, target));
 
             if (Junction.TryReplaceDirectory(folder, target))
                 Log.Info($"{folder} now points to {target}.");
@@ -46,6 +46,12 @@ internal static class UserFolders
         {
             Log.Error($"Could not redirect {folder} to {target}", ex);
         }
+    }
+
+    private static void WarnAboutKeptCopies(string folder, int count)
+    {
+        if (count > 0)
+            Log.Warn($"{count} file(s) in {folder} differed from the ones on the SalsaNOW drive. They were kept next to them with a number added to the name.");
     }
 
     private static void MoveTemp(string temp)
@@ -78,6 +84,12 @@ internal static class UserFolders
 
     private static void RemoveOldTempFiles(string temp)
     {
+        if (FileSystem.IsLink(temp))
+        {
+            Log.Warn($"{temp} is a link. Old temporary files are not cleaned up.");
+            return;
+        }
+
         DateTime bootTime = DateTime.UtcNow - TimeSpan.FromMilliseconds(GetTickCount64());
         DateTime retentionStart = DateTime.UtcNow - TempRetention;
         DateTime cutoff = bootTime > retentionStart ? bootTime : retentionStart;
@@ -110,7 +122,7 @@ internal static class UserFolders
 
     private static bool IsOlderThan(FileSystemInfo entry, DateTime cutoff)
     {
-        if (entry.LastWriteTimeUtc >= cutoff)
+        if (entry.LastWriteTimeUtc >= cutoff || entry.CreationTimeUtc >= cutoff)
             return false;
 
         if (entry is not DirectoryInfo directory || (directory.Attributes & FileAttributes.ReparsePoint) != 0)

@@ -29,8 +29,8 @@ Besides the options the documentation describes, `SalsaNOWSettings.json` accepts
 
 | Key | Default | Effect |
 | --- | --- | --- |
-| `persistUserFolders` | `true` | Keeps Downloads, Pictures, Videos and Music on the SalsaNOW drive (`I:\Downloads` and so on) and sends temporary files to `I:\Temp`, so they survive the session and don't fill up C:. `false` leaves them on C:. |
-| `disabledSilentApps` | none | Silent apps to skip, by name or file name, for example `["CtrlTab", "WindowsMenuToggle"]`. |
+| `persistUserFolders` | `true` | Keeps Downloads, Pictures, Videos and Music on the SalsaNOW drive (`I:\Downloads` and so on), so they survive the session. Temporary files go to `Temp` in the SalsaNOW folder instead of C:, and what is left there from earlier sessions is removed at startup. `false` leaves all of them on C:. |
+| `disabledSilentApps` | none | Silent apps to skip, by name or file name, for example `["CtrlTab", "WindowsMenuToggle"]`. They are neither started nor offered in the desktop menu. |
 | `ctrlWinApp` | none | Program, shortcut or script that Ctrl+Win opens instead of the Start menu. |
 
 `C:\Users\kiosk\Saved Games` is always kept with the other game saves.

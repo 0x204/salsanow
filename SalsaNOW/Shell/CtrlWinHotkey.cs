@@ -13,6 +13,7 @@ internal sealed class CtrlWinHotkey
     private readonly string _program;
     private readonly LowLevelKeyboardProc _callback;
     private readonly CtrlWinGesture _gesture = new();
+    private readonly TaskCompletionSource<bool> _hooked = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private CtrlWinHotkey(string program)
     {
@@ -20,10 +21,11 @@ internal sealed class CtrlWinHotkey
         _callback = OnKeyboardEvent;
     }
 
-    public static void Start(string program)
+    public static Task<bool> StartAsync(string program)
     {
         var hotkey = new CtrlWinHotkey(Environment.ExpandEnvironmentVariables(program.Trim()));
         new Thread(hotkey.Run) { IsBackground = true, Name = "Ctrl+Win hotkey" }.Start();
+        return hotkey._hooked.Task;
     }
 
     private void Run()
@@ -31,10 +33,13 @@ internal sealed class CtrlWinHotkey
         IntPtr hook = SetWindowsHookEx(WH_KEYBOARD_LL, _callback, GetModuleHandle(null), 0);
         if (hook == IntPtr.Zero)
         {
-            Log.Error("Could not watch Ctrl+Win", new Win32Exception());
+            var error = new Win32Exception();
+            _hooked.SetResult(false);
+            Log.Error("Could not watch Ctrl+Win", error);
             return;
         }
 
+        _hooked.SetResult(true);
         Log.Info($"Ctrl+Win opens {_program}.");
         try
         {
@@ -51,15 +56,13 @@ internal sealed class CtrlWinHotkey
     {
         if (code >= 0)
         {
-            var key = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
-            if ((key.flags & LLKHF_INJECTED) == 0)
-            {
-                int message = wParam.ToInt32();
-                bool down = message is WM_KEYDOWN or WM_SYSKEYDOWN;
-                bool controlHeld = GetAsyncKeyState(VK_CONTROL) < 0;
-                if (_gesture.OnKey((int)key.vkCode, down, controlHeld))
-                    ThreadPool.QueueUserWorkItem(_ => Launch());
-            }
+            int virtualKey = (int)Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam).vkCode;
+            int message = wParam.ToInt32();
+            bool down = message is WM_KEYDOWN or WM_SYSKEYDOWN;
+            bool repeat = down && GetAsyncKeyState(virtualKey) < 0;
+            bool controlHeld = GetAsyncKeyState(VK_CONTROL) < 0;
+            if (_gesture.OnKey(virtualKey, down, repeat, controlHeld))
+                ThreadPool.QueueUserWorkItem(_ => Launch());
         }
 
         return CallNextHookEx(IntPtr.Zero, code, wParam, lParam);

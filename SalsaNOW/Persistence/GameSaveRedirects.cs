@@ -19,17 +19,17 @@ internal sealed class GameSaveRedirects(SalsaPaths paths, RemoteConfig config)
     public async Task SetUpAsync(CancellationToken cancellationToken)
     {
         Log.Info("Setting up Cloud Save directory junctions...");
-
-        List<string> folders = await LoadFoldersAsync(cancellationToken);
-        folders.Add(SavedGames);
         Directory.CreateDirectory(paths.GameSaves);
 
+        GameSaveLink savedGames = GameSaveLinks.Plan([SavedGames], paths.GameSaves, out _)[0];
+        int failed = await RedirectAsync(savedGames, cancellationToken) ? 0 : 1;
+
+        List<string> folders = [SavedGames, .. await LoadFoldersAsync(cancellationToken)];
         IReadOnlyList<GameSaveLink> links = GameSaveLinks.Plan(folders, paths.GameSaves, out IReadOnlyList<string> conflicts);
         foreach (string conflict in conflicts)
             Log.Warn($"Skipping game save folder {conflict}: its name is already used by another one.");
 
-        int failed = 0;
-        foreach (GameSaveLink link in links)
+        foreach (GameSaveLink link in links.Where(link => link != savedGames))
         {
             if (!await RedirectAsync(link, cancellationToken))
                 failed++;
@@ -113,7 +113,10 @@ internal sealed class GameSaveRedirects(SalsaPaths paths, RemoteConfig config)
 
         try
         {
-            FileSystem.CopyMissingFiles(link.Folder, link.Target);
+            int keptAside = FileSystem.CopyMissingFiles(link.Folder, link.Target);
+            if (keptAside > 0)
+                Log.Warn($"{keptAside} file(s) in {link.Folder} differed from the saved ones. They were kept next to them with a number added to the name.");
+
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

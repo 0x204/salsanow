@@ -1,4 +1,7 @@
+using System.Text;
+using Microsoft.Win32.SafeHandles;
 using SalsaNOW.Core.IO;
+using static SalsaNOW.Infrastructure.NativeMethods;
 
 namespace SalsaNOW.Infrastructure;
 
@@ -78,22 +81,32 @@ internal static class FileSystem
         }
     }
 
-    public static void CopyMissingFiles(string source, string destination)
+    public static int CopyMissingFiles(string source, string destination)
     {
         Directory.CreateDirectory(destination);
+        int keptAside = 0;
 
         foreach (string file in Directory.GetFiles(source))
         {
             string target = Path.Combine(destination, Path.GetFileName(file));
             if (!File.Exists(target))
+            {
                 File.Copy(file, target);
+            }
+            else if (!ContentEquals(file, target))
+            {
+                File.Copy(file, FreeNumberedName(target));
+                keptAside++;
+            }
         }
 
         foreach (string subdirectory in Directory.GetDirectories(source))
         {
             if (!IsLink(subdirectory))
-                CopyMissingFiles(subdirectory, Path.Combine(destination, Path.GetFileName(subdirectory)));
+                keptAside += CopyMissingFiles(subdirectory, Path.Combine(destination, Path.GetFileName(subdirectory)));
         }
+
+        return keptAside;
     }
 
     public static void DeleteFile(string path)
@@ -177,6 +190,37 @@ internal static class FileSystem
     public static bool IsLink(string path)
     {
         return (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0;
+    }
+
+    public static bool IsSameDirectory(string left, string right)
+    {
+        string? leftPath = FinalPath(left);
+        return leftPath is not null && string.Equals(leftPath, FinalPath(right), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? FinalPath(string directory)
+    {
+        using SafeFileHandle handle = CreateFile(directory, FILE_READ_ATTRIBUTES, FileShare.ReadWrite | FileShare.Delete, IntPtr.Zero, FileMode.Open, FILE_FLAG_BACKUP_SEMANTICS, IntPtr.Zero);
+        if (handle.IsInvalid)
+            return null;
+
+        var path = new StringBuilder(1024);
+        uint length = GetFinalPathNameByHandle(handle, path, (uint)path.Capacity, 0);
+        return length > 0 && length < path.Capacity ? path.ToString() : null;
+    }
+
+    private static string FreeNumberedName(string path)
+    {
+        string directory = Path.GetDirectoryName(path)!;
+        string name = Path.GetFileNameWithoutExtension(path);
+        string extension = Path.GetExtension(path);
+
+        for (int number = 1; ; number++)
+        {
+            string candidate = Path.Combine(directory, $"{name} ({number}){extension}");
+            if (!File.Exists(candidate))
+                return candidate;
+        }
     }
 
     private static int ReadBlock(Stream stream, byte[] buffer)

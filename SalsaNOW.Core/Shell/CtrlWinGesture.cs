@@ -12,13 +12,13 @@ public sealed class CtrlWinGesture
     private bool _withControl;
     private bool _withOtherKey;
 
-    public bool OnKey(int virtualKey, bool down, bool controlHeld)
+    public bool OnKey(int virtualKey, bool down, bool repeat, bool controlHeld)
     {
         if (virtualKey is LeftWin or RightWin)
         {
             if (down)
             {
-                if (!_winHeld)
+                if (!repeat || !_winHeld)
                 {
                     _winHeld = true;
                     _withControl = controlHeld;

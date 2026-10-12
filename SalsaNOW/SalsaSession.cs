@@ -28,11 +28,8 @@ internal static class SalsaSession
             UserFolders.MoveToPersistentDrive(paths);
 
         var disabledSilentApps = new List<string>(settings?.DisabledSilentApps?.Where(name => !string.IsNullOrWhiteSpace(name)) ?? []);
-        if (settings?.CtrlWinApp is { } ctrlWinApp && !string.IsNullOrWhiteSpace(ctrlWinApp))
-        {
-            CtrlWinHotkey.Start(ctrlWinApp);
+        if (settings?.CtrlWinApp is { } ctrlWinApp && !string.IsNullOrWhiteSpace(ctrlWinApp) && await CtrlWinHotkey.StartAsync(ctrlWinApp))
             disabledSilentApps.Add(CtrlWinHotkey.DefaultApp);
-        }
 
         var config = new RemoteConfig(paths.ConfigCache);
 
@@ -52,7 +49,7 @@ internal static class SalsaSession
             RunLoggedAsync("Silent app install", () => new SilentAppInstaller(paths, config, disabledSilentApps).InstallAsync(cancellationToken)),
             RunLoggedAsync("Steam setup", () => new SteamBootstrap(paths, silentLaunch: settings?.SteamSilentLaunch == true, steamInput: settings?.SteamInput == true).RunAsync(cancellationToken)));
 
-        await new DesktopFinalizer(paths, new ShellSettings(paths, settingsFile)).RunAsync(cancellationToken);
+        await new DesktopFinalizer(paths, new ShellSettings(paths, settingsFile), disabledSilentApps).RunAsync(cancellationToken);
 
         await Task.Delay(Timeout.Infinite, cancellationToken);
     }

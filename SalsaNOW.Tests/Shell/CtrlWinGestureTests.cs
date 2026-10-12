@@ -45,7 +45,7 @@ public class CtrlWinGestureTests
         Press(CtrlWinGesture.LeftControl, control: false);
         Press(CtrlWinGesture.LeftWin, control: true);
         Press(otherKey, control: true);
-        Press(CtrlWinGesture.LeftWin, control: true);
+        Press(CtrlWinGesture.LeftWin, control: true, repeat: true);
 
         Assert.False(Release(CtrlWinGesture.LeftWin, control: true));
     }
@@ -62,7 +62,17 @@ public class CtrlWinGestureTests
         Assert.True(Release(CtrlWinGesture.LeftWin, control: true));
     }
 
-    private bool Press(int key, bool control) => _gesture.OnKey(key, down: true, controlHeld: control);
+    [Fact]
+    public void StartsOverWhenWinReleaseWasMissed()
+    {
+        Press(CtrlWinGesture.LeftWin, control: true);
 
-    private bool Release(int key, bool control) => _gesture.OnKey(key, down: false, controlHeld: control);
+        Press(CtrlWinGesture.LeftWin, control: false);
+
+        Assert.False(Release(CtrlWinGesture.LeftWin, control: false));
+    }
+
+    private bool Press(int key, bool control, bool repeat = false) => _gesture.OnKey(key, down: true, repeat, controlHeld: control);
+
+    private bool Release(int key, bool control) => _gesture.OnKey(key, down: false, repeat: false, controlHeld: control);
 }
