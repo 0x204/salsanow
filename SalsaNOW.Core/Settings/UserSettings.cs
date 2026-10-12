@@ -66,6 +66,9 @@ public sealed class UserSettings
 
     [JsonProperty("bingWallpaper")]
     public bool? BingWallpaper { get; set; }
+
+    [JsonProperty("persistUserFolders")]
+    public bool? PersistUserFolders { get; set; }
 }
 
 public sealed class FileAssociation

@@ -27,6 +27,9 @@ internal static class NativeMethods
 
     public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
+    [DllImport("kernel32.dll")]
+    public static extern ulong GetTickCount64();
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern IntPtr FindWindow(string? lpClassName, string? lpWindowName);
 

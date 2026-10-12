@@ -48,6 +48,20 @@ public class UserSettingsTests
     }
 
     [Fact]
+    public void ParsesFolderOption()
+    {
+        const string json = """
+            {
+              "persistUserFolders": false
+            }
+            """;
+
+        UserSettings settings = JsonConfig.Parse<UserSettings>(json);
+
+        Assert.False(settings.PersistUserFolders);
+    }
+
+    [Fact]
     public void MissingOptionsStayUnset()
     {
         UserSettings settings = JsonConfig.Parse<UserSettings>("{}");
@@ -56,5 +70,6 @@ public class UserSettingsTests
         Assert.Null(settings.TaskbarFullTransparency);
         Assert.Null(settings.Associations);
         Assert.False(settings.AccentSourceAutomatic);
+        Assert.Null(settings.PersistUserFolders);
     }
 }

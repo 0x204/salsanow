@@ -24,6 +24,9 @@ internal static class SalsaSession
         UserSettings? settings = settingsFile.TryRead();
         LogSessionSettings(settings);
 
+        if (settings?.PersistUserFolders != false)
+            UserFolders.MoveToPersistentDrive(paths);
+
         var config = new RemoteConfig(paths.ConfigCache);
 
         BackgroundJobs.Start("Environment setup", () => EnvironmentVariables.Configure(paths));
@@ -91,5 +94,7 @@ internal static class SalsaSession
             Log.Info("Steam Input left enabled from SalsaNOWSettings.json.");
         if (settings?.BingWallpaper == true)
             Log.Info("Bing wallpaper of the day enabled from SalsaNOWSettings.json.");
+        if (settings?.PersistUserFolders == false)
+            Log.Info("User folders left on the system drive from SalsaNOWSettings.json.");
     }
 }
