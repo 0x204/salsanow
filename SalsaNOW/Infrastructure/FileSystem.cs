@@ -133,8 +133,8 @@ internal static class FileSystem
         }
         catch (IOException)
         {
-            File.Copy(source, destination, overwrite: true);
-            File.Delete(source);
+            File.Delete(destination);
+            File.Move(source, destination);
         }
     }
 

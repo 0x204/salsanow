@@ -17,7 +17,7 @@ internal sealed class DesktopInstaller(SalsaPaths paths, RemoteConfig config, bo
 
         string? wallpaper = await Wallpaper.ChooseAsync(paths, cancellationToken);
         if (wallpaper is not null)
-            Wallpaper.Apply(wallpaper);
+            TryWithLog("Failed to set the wallpaper", () => Wallpaper.Apply(wallpaper));
 
         try
         {
@@ -65,7 +65,7 @@ internal sealed class DesktopInstaller(SalsaPaths paths, RemoteConfig config, bo
         TryWithLog("Classic right-click menu failed", EnableClassicContextMenu);
 
         var watchdog = new DesktopWatchdog(executable, directory);
-        watchdog.Start();
+        TryWithLog("Desktop start failed", watchdog.Start);
         BackgroundJobs.Start("Desktop watchdog", () => watchdog.RunAsync(cancellationToken));
     }
 
@@ -81,7 +81,7 @@ internal sealed class DesktopInstaller(SalsaPaths paths, RemoteConfig config, bo
         {
             action();
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             Log.Error(failureMessage, ex);
         }

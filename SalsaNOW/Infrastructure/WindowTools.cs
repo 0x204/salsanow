@@ -10,8 +10,7 @@ internal static class WindowTools
         if (window == IntPtr.Zero)
             return false;
 
-        SendMessage(window, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
-        return true;
+        return PostMessage(window, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
     }
 
     public static void NotifySettingChange(IntPtr window, string area, uint timeoutMilliseconds = 500)

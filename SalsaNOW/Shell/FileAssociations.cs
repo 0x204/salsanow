@@ -84,7 +84,12 @@ internal static class FileAssociations
             {
                 ProcessRunner.Run(setUserFta, CommandLine.Quote(type) + " " + CommandLine.Quote(progId), TimeSpan.FromSeconds(30));
             }
-            catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or TimeoutException)
+            catch (TimeoutException ex)
+            {
+                Log.Error($"SetUserFTA {type} did not finish. Skipping the remaining file associations", ex);
+                return;
+            }
+            catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
             {
                 Log.Error($"SetUserFTA {type} failed", ex);
             }
@@ -99,7 +104,12 @@ internal static class FileAssociations
             File.WriteAllLines(listFile, associations.Select(association => $"{association.Type}, {association.ProgId}"));
             return ProcessRunner.Run(setUserFta, CommandLine.Quote(listFile), TimeSpan.FromMinutes(1)) == 0;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Win32Exception or InvalidOperationException or TimeoutException)
+        catch (TimeoutException ex)
+        {
+            Log.Error("SetUserFTA did not finish. Skipping file associations", ex);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Win32Exception or InvalidOperationException)
         {
             Log.Warn("SetUserFTA batch failed, applying one at a time: " + ex.Message);
             return false;

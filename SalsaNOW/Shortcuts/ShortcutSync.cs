@@ -113,8 +113,8 @@ internal sealed class ShortcutSync(SalsaPaths paths)
                 continue;
 
             byte[]? content = ReadShortcut(file);
-            if (content is not null)
-                PlaceShortcut(Path.Combine(_desktop, name), content);
+            if (content is null || !PlaceShortcut(Path.Combine(_desktop, name), content))
+                continue;
 
             try
             {
@@ -183,10 +183,9 @@ internal sealed class ShortcutSync(SalsaPaths paths)
         }
     }
 
-    private static void PlaceShortcut(string destination, byte[] content)
+    private static bool PlaceShortcut(string destination, byte[] content)
     {
-        if (!HasContent(destination, content))
-            WriteShortcut(destination, content);
+        return HasContent(destination, content) || WriteShortcut(destination, content);
     }
 
     private static bool HasContent(string path, byte[] content)
@@ -211,7 +210,7 @@ internal sealed class ShortcutSync(SalsaPaths paths)
         }
     }
 
-    private static void WriteShortcut(string destination, byte[] content)
+    private static bool WriteShortcut(string destination, byte[] content)
     {
         try
         {
@@ -219,10 +218,12 @@ internal sealed class ShortcutSync(SalsaPaths paths)
             string temporary = destination + ".tmp";
             File.WriteAllBytes(temporary, content);
             FileSystem.ReplaceFile(temporary, destination);
+            return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             Log.Error("Shortcut copy failed for " + Path.GetFileName(destination), ex);
+            return false;
         }
     }
 }

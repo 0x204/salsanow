@@ -6,9 +6,6 @@ public static class CommandLine
 {
     public static string Quote(string argument)
     {
-        if (argument.Length > 0 && argument.IndexOfAny([' ', '\t', '\n', '\v', '"']) < 0)
-            return argument;
-
         var quoted = new StringBuilder(argument.Length + 2);
         quoted.Append('"');
 

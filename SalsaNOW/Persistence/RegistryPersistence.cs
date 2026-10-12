@@ -8,14 +8,25 @@ namespace SalsaNOW.Persistence;
 
 internal sealed class RegistryPersistence(SalsaPaths paths, RemoteConfig config)
 {
-    private static readonly TimeSpan RegistryFilesDownloadLimit = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan DownloadLimit = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan ExportTimeout = TimeSpan.FromMinutes(2);
 
     public async Task RunAsync(CancellationToken cancellationToken)
     {
+        Task<RegistryBackupList> backupList = config.LoadAsync<RegistryBackupList>(Endpoints.RegistryBackupList, cancellationToken, DownloadLimit);
         await ImportRegistryFilesAsync(cancellationToken);
 
-        RegistryBackupList backups = await config.LoadAsync<RegistryBackupList>(Endpoints.RegistryBackupList, cancellationToken);
+        RegistryBackupList backups;
+        try
+        {
+            backups = await backupList;
+        }
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            Log.Error("Could not load the registry backup list", ex);
+            return;
+        }
+
         Directory.CreateDirectory(paths.RegistryBackups);
 
         RestoreBackups(backups);
@@ -29,7 +40,7 @@ internal sealed class RegistryPersistence(SalsaPaths paths, RemoteConfig config)
         List<RegistryFileEntry> files;
         try
         {
-            files = await config.LoadAsync<List<RegistryFileEntry>>(Endpoints.RegistryFiles, cancellationToken, RegistryFilesDownloadLimit);
+            files = await config.LoadAsync<List<RegistryFileEntry>>(Endpoints.RegistryFiles, cancellationToken, DownloadLimit);
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
@@ -38,7 +49,7 @@ internal sealed class RegistryPersistence(SalsaPaths paths, RemoteConfig config)
         }
 
         using var downloads = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        downloads.CancelAfter(RegistryFilesDownloadLimit);
+        downloads.CancelAfter(DownloadLimit);
 
         foreach (RegistryFileEntry entry in files)
         {

@@ -31,7 +31,8 @@ internal static class Log
 
     public static void Error(string message) => Write("[ERR]", message, ConsoleColor.Red);
 
-    public static void Error(string message, Exception exception) => Error($"{message}: {exception.Message}");
+    public static void Error(string message, Exception exception) =>
+        Write("[ERR]", $"{message}: {exception.Message}", ConsoleColor.Red, $"{message}: {exception}");
 
     public static string ReadAll()
     {
@@ -48,7 +49,7 @@ internal static class Log
         }
     }
 
-    private static void Write(string prefix, string message, ConsoleColor color)
+    private static void Write(string prefix, string message, ConsoleColor color, string? fileMessage = null)
     {
         lock (Sync)
         {
@@ -59,7 +60,7 @@ internal static class Log
 
             try
             {
-                File.AppendAllText(_filePath, $"[{DateTime.Now:HH:mm:ss}] {prefix} {message}{Environment.NewLine}");
+                File.AppendAllText(_filePath, $"[{DateTime.Now:HH:mm:ss}] {prefix} {fileMessage ?? message}{Environment.NewLine}");
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

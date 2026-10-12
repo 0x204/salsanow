@@ -10,7 +10,7 @@ internal sealed class RemoteConfig(string cacheDirectory)
         string cacheFile = Path.Combine(cacheDirectory, CacheFileName(url));
 
         using var download = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        if (timeLimit is TimeSpan limit)
+        if (timeLimit is TimeSpan limit && File.Exists(cacheFile))
             download.CancelAfter(limit);
 
         try

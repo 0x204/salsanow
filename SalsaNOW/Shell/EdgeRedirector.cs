@@ -152,7 +152,8 @@ internal sealed class EdgeRedirector(UserSettingsFile settingsFile, string fallb
     private static bool IsUsable(string? browser)
     {
         return !string.IsNullOrWhiteSpace(browser)
-            && !browser!.EndsWith("msedge.exe", StringComparison.OrdinalIgnoreCase)
+            && browser!.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+            && !browser.EndsWith("msedge.exe", StringComparison.OrdinalIgnoreCase)
             && File.Exists(browser);
     }
 
@@ -164,6 +165,8 @@ internal sealed class EdgeRedirector(UserSettingsFile settingsFile, string fallb
             Log.Warn(changed ? "Default browser was cleared. Edge URLs will not be redirected." : "Default browser is not set. Edge URLs will not be redirected.");
         else if (_browser!.EndsWith("msedge.exe", StringComparison.OrdinalIgnoreCase))
             Log.Warn("Default browser is Edge. Edge URLs will not be redirected.");
+        else if (!_browser.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            Log.Warn("Default browser must be an .exe file. Edge URLs will not be redirected: " + _browser);
         else
             Log.Warn("Default browser not found: " + _browser);
     }

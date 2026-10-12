@@ -93,12 +93,19 @@ internal sealed class SilentAppInstaller(SalsaPaths paths, RemoteConfig config, 
             else if (updateAvailable)
                 Log.Info($"Updating silent app {app.Name} to {version}");
 
-            if (app.Archive)
-                await ZipPackage.InstallAsync(app.Url, folder, cancellationToken);
-            else
-                await Http.DownloadFileAsync(app.Url, executable, cancellationToken);
+            try
+            {
+                if (app.Archive)
+                    await ZipPackage.InstallAsync(app.Url, folder, cancellationToken);
+                else
+                    await Http.DownloadFileAsync(app.Url, executable, cancellationToken);
 
-            marker.Write(version);
+                marker.Write(version);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException && installed && File.Exists(executable))
+            {
+                Log.Warn($"Could not update silent app {app.Name} ({ex.Message}). Using the installed copy.");
+            }
 
             if (app.Run)
                 Start(executable, app.Archive);

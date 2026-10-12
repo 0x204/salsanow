@@ -13,6 +13,9 @@ internal static class Http
     private static readonly TimeSpan StallTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan[] RetryDelays = [TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5)];
 
+    private const int ErrorHandleDiskFull = 0x27;
+    private const int ErrorDiskFull = 0x70;
+
     private static readonly HttpClient Client = CreateClient();
 
     public static Task<string> GetStringAsync(string url, CancellationToken cancellationToken = default)
@@ -29,12 +32,12 @@ internal static class Http
         }, cancellationToken);
     }
 
-    public static Task DownloadFileAsync(string url, string destination, CancellationToken cancellationToken = default)
+    public static async Task DownloadFileAsync(string url, string destination, CancellationToken cancellationToken = default)
     {
-        return WithRetriesAsync(url, async token =>
+        string partial = destination + ".part";
+        try
         {
-            string partial = destination + ".part";
-            try
+            await WithRetriesAsync(url, async token =>
             {
                 using (HttpResponseMessage response = await GetAsync(url, token))
                 using (var file = new FileStream(partial, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true))
@@ -42,14 +45,15 @@ internal static class Http
                     await CopyContentAsync(response, file, token);
                 }
 
-                FileSystem.ReplaceFile(partial, destination);
                 return true;
-            }
-            finally
-            {
-                FileSystem.TryDeleteFile(partial);
-            }
-        }, cancellationToken);
+            }, cancellationToken);
+
+            FileSystem.ReplaceFile(partial, destination);
+        }
+        finally
+        {
+            FileSystem.TryDeleteFile(partial);
+        }
     }
 
     public static async Task<string> PostTextAsync(string url, string text, string userAgent, CancellationToken cancellationToken = default)
@@ -161,7 +165,10 @@ internal static class Http
     {
         HttpStatusException status => status.IsTransient,
         HttpRequestException { InnerException: WebException { Status: WebExceptionStatus.TrustFailure } } => false,
+        IOException io when IsDiskFull(io) => false,
         HttpRequestException or TimeoutException or IOException or WebException => true,
         _ => false,
     };
+
+    private static bool IsDiskFull(IOException exception) => (exception.HResult & 0xFFFF) is ErrorDiskFull or ErrorHandleDiskFull;
 }

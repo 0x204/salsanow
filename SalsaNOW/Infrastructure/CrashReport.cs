@@ -6,14 +6,16 @@ namespace SalsaNOW.Infrastructure;
 
 internal static class CrashReport
 {
-    public static async Task ShowAsync(string error)
+    public static async Task ShowAsync(object error)
     {
-        Log.Error(error);
+        string details = error.ToString();
+        string summary = error is Exception exception ? exception.Message : details;
+        Log.Error(details);
 
         string link;
         try
         {
-            link = (await Http.PostTextAsync(Endpoints.CrashLogPaste, BuildReport(error), "SalsaNOW-CrashReporter")).Trim();
+            link = (await Http.PostTextAsync(Endpoints.CrashLogPaste, BuildReport(details), "SalsaNOW-CrashReporter")).Trim();
         }
         catch (Exception ex) when (ex is HttpRequestException or TimeoutException or IOException or OperationCanceledException)
         {
@@ -21,7 +23,7 @@ internal static class CrashReport
         }
 
         Dialogs.ShowError(
-            $"SalsaNOW just crashed!\n\nError:\n{error}\n\nPlease send this Crashlog to the SalsaNOW Devs:\n{link}",
+            $"SalsaNOW just crashed!\n\nError:\n{summary}\n\nPlease send this Crashlog to the SalsaNOW Devs:\n{link}",
             "SalsaNOW - Fatal Error");
     }
 
