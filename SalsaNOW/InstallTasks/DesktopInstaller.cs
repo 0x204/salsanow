@@ -181,14 +181,16 @@ namespace SalsaNOW
         private static async Task EnsureDesktopAvailableAsync(string exePath, string workingDirectory)
         {
             bool announced = false;
+            int failedStarts = 0;
             while (true)
             {
-                await Task.Delay(5000);
+                await Task.Delay(TimeSpan.FromSeconds(Math.Min(5 << failedStarts, 60)));
 
                 try
                 {
                     if (IsDesktopAvailable())
                     {
+                        failedStarts = 0;
                         if (!announced)
                         {
                             SalsaLogger.Info("Desktop is available.");
@@ -199,6 +201,7 @@ namespace SalsaNOW
                     }
 
                     announced = false;
+                    failedStarts = Math.Min(failedStarts + 1, 4);
                     SalsaLogger.Warn("Desktop is not available. Starting " + exePath);
                     StartDesktopProcess(exePath, workingDirectory);
                 }
