@@ -62,17 +62,13 @@ namespace SalsaNOW
                 SalsaLogger.Info("Downloading all .NET zips...");
                 await Task.WhenAll(packs.Select(pack => DownloadPackAsync(pack, token)));
 
-                var broken = packs.Where(pack => !IsIntactZip(pack.ZipPath)).Select(pack => pack.Label).ToArray();
-                if (broken.Length > 0)
-                {
-                    SalsaLogger.Error("Not all .NET zips are intact. Skipping extract: " + string.Join(", ", broken));
-                    CleanupZips(packs);
-                    return;
-                }
+                var brokenChannels = new HashSet<string>(packs.Where(pack => !IsIntactZip(pack.ZipPath)).Select(pack => pack.Channel));
+                if (brokenChannels.Count > 0)
+                    SalsaLogger.Error("Some .NET zips are missing or damaged. Skipping .NET " + string.Join(", ", brokenChannels));
 
-                SalsaLogger.Info("All .NET zips downloaded and intact. Extracting to " + installDir);
+                SalsaLogger.Info("Extracting .NET runtimes to " + installDir);
 
-                foreach (RuntimePack pack in packs)
+                foreach (RuntimePack pack in packs.Where(pack => !brokenChannels.Contains(pack.Channel)))
                 {
                     token.ThrowIfCancellationRequested();
                     try
@@ -340,6 +336,7 @@ namespace SalsaNOW
         {
             public RuntimePack(string channel, string version, string packName, string akaName, string cdnFolder, string cdnFile)
             {
+                Channel = channel;
                 Label = $".NET {channel} {packName}";
                 Urls = new List<string>();
 
@@ -356,6 +353,7 @@ namespace SalsaNOW
                 }
             }
 
+            public string Channel { get; }
             public string Label { get; }
             public List<string> Urls { get; }
             public string ZipPath { get; set; }
