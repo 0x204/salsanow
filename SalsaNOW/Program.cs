@@ -15,6 +15,8 @@ namespace SalsaNOW
         private static readonly CancellationTokenSource cts = new CancellationTokenSource();
         private static string customAppsJsonPath = null;
 
+        internal static string GlobalDirectory => globalDirectory;
+
         [STAThread]
         static async Task Main(string[] args)
         {

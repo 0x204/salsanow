@@ -15,8 +15,8 @@ namespace SalsaNOW
 {
     internal static class SalsaNOWSettingsApply
     {
-        private const string ConfigPath = @"I:\Apps\SalsaNOW\SalsaNOWSettings.json";
-        private const string WaterfoxPath = @"I:\Apps\SalsaNOW\Waterfox\waterfox.exe";
+        private static string ConfigPath => Path.Combine(Program.GlobalDirectory, "SalsaNOWSettings.json");
+        private static string WaterfoxPath => Path.Combine(Program.GlobalDirectory, "Waterfox", "waterfox.exe");
         private static readonly TimeSpan LaunchCooldown = TimeSpan.FromSeconds(3);
 
         private static readonly Regex UrlRegex = new Regex(
@@ -744,9 +744,9 @@ namespace SalsaNOW
         private const string DesktopKey = @"Control Panel\Desktop";
         private const string AdvancedKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced";
         private const string StuckRectsKey = @"Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3";
-        private const string TranslucentTbFolder = @"I:\Apps\SalsaNOW\Zxplorer\TranslucentTB";
-        private const string TranslucentTbExe = @"I:\Apps\SalsaNOW\Zxplorer\TranslucentTB\TranslucentTB.exe";
-        private const string TranslucentTbSettings = @"I:\Apps\SalsaNOW\Zxplorer\TranslucentTB\settings.json";
+        private static string TranslucentTbFolder => Path.Combine(Program.GlobalDirectory, "Zxplorer", "TranslucentTB");
+        private static string TranslucentTbExe => Path.Combine(TranslucentTbFolder, "TranslucentTB.exe");
+        private static string TranslucentTbSettings => Path.Combine(TranslucentTbFolder, "settings.json");
         private const string TranslucentTbClearSettings =
             "{\r\n" +
             "  \"$schema\": \"https://translucenttb.github.io/settings.schema.json\",\r\n" +

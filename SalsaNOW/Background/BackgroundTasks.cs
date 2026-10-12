@@ -569,7 +569,7 @@ namespace SalsaNOW
                     "Microsoft",
                     "dotnet");
 
-                string powershellRoot = @"I:\Apps\SalsaNOW\SilentApps\PowerShell";
+                string powershellRoot = Path.Combine(Program.GlobalDirectory, "SilentApps", "PowerShell");
 
                 using (RegistryKey key = Registry.CurrentUser.CreateSubKey("Environment"))
                 {
