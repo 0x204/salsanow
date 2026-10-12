@@ -78,6 +78,24 @@ internal static class FileSystem
         }
     }
 
+    public static void CopyMissingFiles(string source, string destination)
+    {
+        Directory.CreateDirectory(destination);
+
+        foreach (string file in Directory.GetFiles(source))
+        {
+            string target = Path.Combine(destination, Path.GetFileName(file));
+            if (!File.Exists(target))
+                File.Copy(file, target);
+        }
+
+        foreach (string subdirectory in Directory.GetDirectories(source))
+        {
+            if (!IsLink(subdirectory))
+                CopyMissingFiles(subdirectory, Path.Combine(destination, Path.GetFileName(subdirectory)));
+        }
+    }
+
     public static void DeleteFile(string path)
     {
         if (!File.Exists(path))
