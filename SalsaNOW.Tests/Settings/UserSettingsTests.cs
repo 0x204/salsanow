@@ -48,6 +48,25 @@ public class UserSettingsTests
     }
 
     [Fact]
+    public void ParsesFolderAndSilentAppOptions()
+    {
+        const string json = """
+            {
+              "persistUserFolders": false,
+              "disabledSilentApps": [ "CtrlTab", "WindowsMenuToggle" ],
+              "ctrlWinApp": "I:\\Apps\\Flow Launcher\\Flow.Launcher.exe"
+            }
+            """;
+
+        UserSettings settings = JsonConfig.Parse<UserSettings>(json);
+
+        Assert.False(settings.PersistUserFolders);
+        string[] expected = ["CtrlTab", "WindowsMenuToggle"];
+        Assert.Equal(expected, settings.DisabledSilentApps);
+        Assert.Equal(@"I:\Apps\Flow Launcher\Flow.Launcher.exe", settings.CtrlWinApp);
+    }
+
+    [Fact]
     public void MissingOptionsStayUnset()
     {
         UserSettings settings = JsonConfig.Parse<UserSettings>("{}");
@@ -56,5 +75,8 @@ public class UserSettingsTests
         Assert.Null(settings.TaskbarFullTransparency);
         Assert.Null(settings.Associations);
         Assert.False(settings.AccentSourceAutomatic);
+        Assert.Null(settings.PersistUserFolders);
+        Assert.Null(settings.DisabledSilentApps);
+        Assert.Null(settings.CtrlWinApp);
     }
 }

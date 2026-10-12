@@ -34,6 +34,18 @@ public class GameSaveLinksTests
     }
 
     [Fact]
+    public void IgnoresRepeatedFolders()
+    {
+        string[] folders = [@"C:\Users\kiosk\Saved Games", @"C:\Users\Public\Documents", @"c:\users\kiosk\saved games"];
+
+        IReadOnlyList<GameSaveLink> links = GameSaveLinks.Plan(folders, SavesRoot, out IReadOnlyList<string> conflicts);
+
+        Assert.Empty(conflicts);
+        string[] expected = [@"C:\Users\kiosk\Saved Games", @"C:\Users\Public\Documents"];
+        Assert.Equal(expected, links.Select(link => link.Folder));
+    }
+
+    [Fact]
     public void SkipsDriveRootsAndBlankEntries()
     {
         IReadOnlyList<GameSaveLink> links = GameSaveLinks.Plan([@"C:\", "", "  "], SavesRoot, out IReadOnlyList<string> conflicts);

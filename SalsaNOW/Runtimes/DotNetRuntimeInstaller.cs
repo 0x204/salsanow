@@ -12,6 +12,8 @@ internal static class DotNetRuntimeInstaller
 
     private const string FinalDotNet5Version = "5.0.17";
 
+    private const string CompleteMarker = ".salsanow-complete";
+
     public static string InstallDirectory { get; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Microsoft", "dotnet");
 
@@ -47,8 +49,17 @@ internal static class DotNetRuntimeInstaller
                 cancellationToken.ThrowIfCancellationRequested();
                 try
                 {
-                    Extract(pack.ArchivePath!, InstallDirectory);
-                    Log.Info("Extracted " + pack.Label);
+                    if (Extract(pack.ArchivePath!, InstallDirectory, out IReadOnlyCollection<string> frameworkFolders))
+                    {
+                        foreach (string folder in frameworkFolders)
+                            File.WriteAllText(Path.Combine(folder, CompleteMarker), pack.Label);
+
+                        Log.Info("Extracted " + pack.Label);
+                    }
+                    else
+                    {
+                        Log.Error($"{pack.Label} was only partly extracted. It will be extracted again next session.");
+                    }
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
                 {
@@ -82,7 +93,7 @@ internal static class DotNetRuntimeInstaller
         return Directory.Exists(frameworkDirectory)
             && Directory.GetDirectories(frameworkDirectory)
                 .Where(version => RuntimeRelease.IsChannelFolder(Path.GetFileName(version), channel))
-                .Any(version => Directory.EnumerateFiles(version, "*.dll").Any());
+                .Any(version => File.Exists(Path.Combine(version, CompleteMarker)));
     }
 
     private static async Task<RuntimePack[]> ResolvePacksAsync(string channel, CancellationToken cancellationToken)
@@ -125,11 +136,14 @@ internal static class DotNetRuntimeInstaller
         return null;
     }
 
-    private static void Extract(string archivePath, string destination)
+    private static bool Extract(string archivePath, string destination, out IReadOnlyCollection<string> frameworkFolders)
     {
         string root = Path.GetFullPath(destination).TrimEnd('\\');
-        using ZipArchive archive = ZipFile.OpenRead(archivePath);
+        var folders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        frameworkFolders = folders;
+        bool complete = true;
 
+        using ZipArchive archive = ZipFile.OpenRead(archivePath);
         foreach (ZipArchiveEntry entry in archive.Entries)
         {
             if (!ZipEntryPath.TryResolve(root, entry.FullName, entry.ExternalAttributes, out string relativePath, out bool isDirectory))
@@ -147,12 +161,19 @@ internal static class DotNetRuntimeInstaller
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
                 FileSystem.DeleteFile(target);
                 entry.ExtractToFile(target);
+
+                string[] segments = relativePath.Split('\\');
+                if (segments.Length > 3 && string.Equals(segments[0], "shared", StringComparison.OrdinalIgnoreCase))
+                    folders.Add(Path.Combine(root, segments[0], segments[1], segments[2]));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
+                complete = false;
                 Log.Warn($"Skipped zip entry {entry.FullName}: {ex.Message}");
             }
         }
+
+        return complete;
     }
 
     private sealed class RuntimePack(string channel, string version, string name, string akaFileName, string cdnFolder, string cdnFileName)

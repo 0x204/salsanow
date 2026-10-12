@@ -76,9 +76,16 @@ internal sealed class AppInstaller(SalsaPaths paths, RemoteConfig config, string
         else
         {
             Log.Info(installed ? $"Updating {app.Name} to {version}" : "Installing " + app.Name);
-            await ZipPackage.InstallAsync(app.Url, directory, cancellationToken);
-            marker.Write(version);
-            CreateDesktopShortcut(app.Name, executable, directory);
+            try
+            {
+                await ZipPackage.InstallAsync(app.Url, directory, cancellationToken);
+                marker.Write(version);
+                CreateDesktopShortcut(app.Name, executable, directory);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException && installed && File.Exists(executable))
+            {
+                Log.Warn($"Could not update {app.Name} ({ex.Message}). Using the installed copy.");
+            }
         }
 
         if (app.Run)

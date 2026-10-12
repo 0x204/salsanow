@@ -24,6 +24,13 @@ internal static class SalsaSession
         UserSettings? settings = settingsFile.TryRead();
         LogSessionSettings(settings);
 
+        if (settings?.PersistUserFolders != false)
+            UserFolders.MoveToPersistentDrive(paths);
+
+        var disabledSilentApps = new List<string>(settings?.DisabledSilentApps?.Where(name => !string.IsNullOrWhiteSpace(name)) ?? []);
+        if (settings?.CtrlWinApp is { } ctrlWinApp && !string.IsNullOrWhiteSpace(ctrlWinApp) && await CtrlWinHotkey.StartAsync(ctrlWinApp))
+            disabledSilentApps.Add(CtrlWinHotkey.DefaultApp);
+
         var config = new RemoteConfig(paths.ConfigCache);
 
         BackgroundJobs.Start("Environment setup", () => EnvironmentVariables.Configure(paths));
@@ -39,10 +46,10 @@ internal static class SalsaSession
         await Task.WhenAll(
             RunLoggedAsync("Desktop setup", () => new DesktopInstaller(paths, config, bingWallpaper: settings?.BingWallpaper == true).InstallAsync(cancellationToken)),
             RunLoggedAsync("App install", () => new AppInstaller(paths, config, options.CustomAppsJson).InstallAsync(cancellationToken)),
-            RunLoggedAsync("Silent app install", () => new SilentAppInstaller(paths, config).InstallAsync(cancellationToken)),
+            RunLoggedAsync("Silent app install", () => new SilentAppInstaller(paths, config, disabledSilentApps).InstallAsync(cancellationToken)),
             RunLoggedAsync("Steam setup", () => new SteamBootstrap(paths, silentLaunch: settings?.SteamSilentLaunch == true, steamInput: settings?.SteamInput == true).RunAsync(cancellationToken)));
 
-        await new DesktopFinalizer(paths, new ShellSettings(paths, settingsFile)).RunAsync(cancellationToken);
+        await new DesktopFinalizer(paths, new ShellSettings(paths, settingsFile), disabledSilentApps).RunAsync(cancellationToken);
 
         await Task.Delay(Timeout.Infinite, cancellationToken);
     }
@@ -91,5 +98,7 @@ internal static class SalsaSession
             Log.Info("Steam Input left enabled from SalsaNOWSettings.json.");
         if (settings?.BingWallpaper == true)
             Log.Info("Bing wallpaper of the day enabled from SalsaNOWSettings.json.");
+        if (settings?.PersistUserFolders == false)
+            Log.Info("User folders left on the system drive from SalsaNOWSettings.json.");
     }
 }

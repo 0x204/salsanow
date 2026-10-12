@@ -43,7 +43,7 @@ internal static class Program
         };
 
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
-            CrashReport.ShowAsync(e.ExceptionObject.ToString()).GetAwaiter().GetResult();
+            CrashReport.ShowAsync(e.ExceptionObject).GetAwaiter().GetResult();
 
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {
@@ -60,7 +60,7 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            await CrashReport.ShowAsync(ex.Message);
+            await CrashReport.ShowAsync(ex);
             return 1;
         }
 

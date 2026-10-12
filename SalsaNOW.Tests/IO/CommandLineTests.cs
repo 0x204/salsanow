@@ -6,7 +6,9 @@ namespace SalsaNOW.Tests.IO;
 public class CommandLineTests
 {
     [Theory]
-    [InlineData("simple", "simple")]
+    [InlineData("simple", "\"simple\"")]
+    [InlineData("https://example.com/?a=1&b=2", "\"https://example.com/?a=1&b=2\"")]
+    [InlineData(@"https://example.com/path\", "\"https://example.com/path\\\\\"")]
     [InlineData("", "\"\"")]
     [InlineData("with space", "\"with space\"")]
     [InlineData(@"C:\Program Files\app\", "\"C:\\Program Files\\app\\\\\"")]

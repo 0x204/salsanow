@@ -28,6 +28,8 @@ internal sealed class SalsaPaths(string root)
 
     public string ConfigCache => Path.Combine(Root, "Cache");
 
+    public string Temp => Path.Combine(Root, "Temp");
+
     public string SettingsFile => Path.Combine(Root, "SalsaNOWSettings.json");
 
     public string StartupBatch => Path.Combine(Root, "StartupBatch.bat");

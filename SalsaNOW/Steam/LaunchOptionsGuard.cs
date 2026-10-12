@@ -6,14 +6,15 @@ namespace SalsaNOW.Steam;
 internal static class LaunchOptionsGuard
 {
     private const string ConfigFileName = "localconfig.vdf";
+    private static readonly TimeSpan UserDataPollInterval = TimeSpan.FromSeconds(5);
 
     public static async Task RunAsync(CancellationToken cancellationToken)
     {
-        if (!Directory.Exists(SteamPaths.UserData))
-            return;
-
         try
         {
+            while (!Directory.Exists(SteamPaths.UserData))
+                await Task.Delay(UserDataPollInterval, cancellationToken);
+
             using var watcher = new FileSystemWatcher(SteamPaths.UserData, ConfigFileName)
             {
                 IncludeSubdirectories = true,
@@ -25,8 +26,7 @@ internal static class LaunchOptionsGuard
             watcher.Renamed += (_, e) => InspectInBackground(e.FullPath);
             watcher.EnableRaisingEvents = true;
 
-            foreach (string file in Directory.EnumerateFiles(SteamPaths.UserData, ConfigFileName, SearchOption.AllDirectories))
-                InspectInBackground(file);
+            InspectExistingFiles();
 
             await Task.Delay(Timeout.Infinite, cancellationToken);
         }
@@ -36,6 +36,19 @@ internal static class LaunchOptionsGuard
         catch (Exception ex)
         {
             Log.Error($"Brick prevention task failed: {ex.Message}, MAKE SURE YOU DO NOT USE THE STEAM LAUNCH OPTIONS");
+        }
+    }
+
+    private static void InspectExistingFiles()
+    {
+        try
+        {
+            foreach (string file in Directory.EnumerateFiles(SteamPaths.UserData, ConfigFileName, SearchOption.AllDirectories))
+                InspectInBackground(file);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Warn("Could not check the existing Steam launch options: " + ex.Message);
         }
     }
 
@@ -73,9 +86,17 @@ internal static class LaunchOptionsGuard
 
     private static void StopSteam(string configFile)
     {
-        File.Delete(configFile);
         WindowTools.ShowConsole();
         Log.Error("STEAM LAUNCH OPTIONS DETECTED. Session terminated.");
-        ProcessRunner.KillAll("steam");
+        ProcessRunner.KillAll("steam", TimeSpan.FromSeconds(5));
+
+        try
+        {
+            FileSystem.DeleteFile(configFile);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Error("Could not delete " + configFile, ex);
+        }
     }
 }

@@ -112,7 +112,7 @@ internal static class Wallpaper
             desktopWallpaper.SetWallpaper(null, path);
             return true;
         }
-        catch (Exception ex) when (ex is COMException or InvalidCastException)
+        catch (Exception ex) when (ex is COMException or InvalidCastException or ArgumentException or UnauthorizedAccessException or IOException)
         {
             return false;
         }

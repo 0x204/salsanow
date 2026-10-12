@@ -11,9 +11,13 @@ public static class GameSaveLinks
         var links = new List<GameSaveLink>();
         var skipped = new List<string>();
         var usedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seenFolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (string folder in folders.Where(f => !string.IsNullOrWhiteSpace(f)))
         {
+            if (!seenFolders.Add(folder))
+                continue;
+
             string name = PathRules.LastSegment(folder);
             if (name.Length == 0 || name.EndsWith(":", StringComparison.Ordinal) || !usedNames.Add(name))
             {

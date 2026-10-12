@@ -14,19 +14,22 @@ internal sealed class GameSaveRedirects(SalsaPaths paths, RemoteConfig config)
 {
     private const string PublicDocuments = @"C:\Users\Public\Documents";
 
+    private static readonly string SavedGames = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Saved Games");
+
     public async Task SetUpAsync(CancellationToken cancellationToken)
     {
         Log.Info("Setting up Cloud Save directory junctions...");
-
-        GameSavePathList list = await config.LoadAsync<GameSavePathList>(Endpoints.GameSavePaths, cancellationToken);
         Directory.CreateDirectory(paths.GameSaves);
 
-        IReadOnlyList<GameSaveLink> links = GameSaveLinks.Plan(list.Paths.Select(Normalize), paths.GameSaves, out IReadOnlyList<string> conflicts);
+        GameSaveLink savedGames = GameSaveLinks.Plan([SavedGames], paths.GameSaves, out _)[0];
+        int failed = await RedirectAsync(savedGames, cancellationToken) ? 0 : 1;
+
+        List<string> folders = [SavedGames, .. await LoadFoldersAsync(cancellationToken)];
+        IReadOnlyList<GameSaveLink> links = GameSaveLinks.Plan(folders, paths.GameSaves, out IReadOnlyList<string> conflicts);
         foreach (string conflict in conflicts)
             Log.Warn($"Skipping game save folder {conflict}: its name is already used by another one.");
 
-        int failed = 0;
-        foreach (GameSaveLink link in links)
+        foreach (GameSaveLink link in links.Where(link => link != savedGames))
         {
             if (!await RedirectAsync(link, cancellationToken))
                 failed++;
@@ -36,6 +39,20 @@ internal sealed class GameSaveRedirects(SalsaPaths paths, RemoteConfig config)
             Log.Info("Cloud Save junctions successfully created.");
         else
             Log.Warn($"Cloud Save junctions created with {failed} failure(s).");
+    }
+
+    private async Task<List<string>> LoadFoldersAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            GameSavePathList list = await config.LoadAsync<GameSavePathList>(Endpoints.GameSavePaths, cancellationToken);
+            return (list.Paths ?? []).Select(Normalize).ToList();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log.Error("Could not load the game save folder list", ex);
+            return [];
+        }
     }
 
     private static string Normalize(string folder)
@@ -57,11 +74,11 @@ internal sealed class GameSaveRedirects(SalsaPaths paths, RemoteConfig config)
         {
             Directory.CreateDirectory(link.Target);
 
-            if (string.Equals(link.Folder, SteamPaths.Games, StringComparison.OrdinalIgnoreCase))
-                CopyMissingFiles(link.Folder, link.Target);
+            if (KeepsExistingFiles(link.Folder) && !TryCopyExistingFiles(link))
+                return false;
 
             Directory.CreateDirectory(Path.GetDirectoryName(link.Folder)!);
-            if (TryCreateJunction(link))
+            if (Junction.TryReplaceDirectory(link.Folder, link.Target))
                 return true;
 
             if (link.Folder.StartsWith(PublicDocuments, StringComparison.OrdinalIgnoreCase))
@@ -70,7 +87,7 @@ internal sealed class GameSaveRedirects(SalsaPaths paths, RemoteConfig config)
                 for (int attempt = 0; attempt < 20; attempt++)
                 {
                     await Task.Delay(150, cancellationToken);
-                    if (TryCreateJunction(link))
+                    if (Junction.TryReplaceDirectory(link.Folder, link.Target))
                         return true;
                 }
             }
@@ -78,49 +95,34 @@ internal sealed class GameSaveRedirects(SalsaPaths paths, RemoteConfig config)
             Log.Error($"Could not redirect {link.Folder} to Game Saves.");
             return false;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Win32Exception or TimeoutException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Win32Exception or TimeoutException or InvalidOperationException)
         {
             Log.Error($"Game Saves Setup Error for {link.Folder}", ex);
             return false;
         }
     }
 
-    private static bool TryCreateJunction(GameSaveLink link)
+    private static bool KeepsExistingFiles(string folder) =>
+        string.Equals(folder, SteamPaths.Games, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(folder, SavedGames, StringComparison.OrdinalIgnoreCase);
+
+    private static bool TryCopyExistingFiles(GameSaveLink link)
     {
+        if (!Directory.Exists(link.Folder) || FileSystem.IsLink(link.Folder))
+            return true;
+
         try
         {
-            FileSystem.DeleteDirectory(link.Folder);
+            int keptAside = FileSystem.CopyMissingFiles(link.Folder, link.Target);
+            if (keptAside > 0)
+                Log.Warn($"{keptAside} file(s) in {link.Folder} differed from the saved ones. They were kept next to them with a number added to the name.");
+
+            return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            Log.Error($"Could not copy the existing files of {link.Folder}", ex);
             return false;
-        }
-
-        return ProcessRunner.Run("cmd.exe", $"/c mklink /J \"{link.Folder}\" \"{link.Target}\"", TimeSpan.FromSeconds(30)) == 0;
-    }
-
-    private static void CopyMissingFiles(string source, string destination)
-    {
-        if (!Directory.Exists(source) || FileSystem.IsLink(source))
-            return;
-
-        try
-        {
-            foreach (string file in Directory.GetFiles(source, "*", SearchOption.AllDirectories))
-            {
-                string target = Path.Combine(destination, file.Substring(source.Length).TrimStart('\\'));
-                if (File.Exists(target))
-                    continue;
-
-                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                File.Copy(file, target);
-            }
-
-            Log.Info(@"Persisted existing Steam steam\games folder contents.");
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            Log.Error(@"Failed to persist Steam steam\games contents", ex);
         }
     }
 
