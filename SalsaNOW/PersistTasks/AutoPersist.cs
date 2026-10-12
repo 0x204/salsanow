@@ -24,7 +24,7 @@ namespace SalsaNOW
             using (WebClient client = new WebClient())
             {
                 // Download config once
-                string json = await client.DownloadStringTaskAsync(jsonUrl);
+                string json = await client.DownloadStringWithTimeoutAsync(jsonUrl);
 
                 RegistryBackupConfig config =
                     JsonConvert.DeserializeObject<RegistryBackupConfig>(json);
@@ -186,7 +186,7 @@ namespace SalsaNOW
 
             using (WebClient client = new WebClient())
             {
-                string json = await client.DownloadStringTaskAsync(jsonUrl);
+                string json = await client.DownloadStringWithTimeoutAsync(jsonUrl);
 
                 var files =
                     JsonConvert.DeserializeObject<List<RegistryFile>>(json);
@@ -200,7 +200,7 @@ namespace SalsaNOW
                         downloadDir,
                         Path.GetFileName(entry.File));
 
-                    await client.DownloadFileTaskAsync(
+                    await client.DownloadFileWithTimeoutAsync(
                         entry.Url,
                         regFile);
 
@@ -218,7 +218,7 @@ namespace SalsaNOW
             {
                 SalsaLogger.Info("Setting up Cloud Save directory junctions...");
                 string json;
-                using (var wc = new WebClient()) json = await wc.DownloadStringTaskAsync("https://salsanowfiles.work/jsons/GameSavesPaths.json");
+                using (var wc = new WebClient()) json = await wc.DownloadStringWithTimeoutAsync("https://salsanowfiles.work/jsons/GameSavesPaths.json");
                 var savePaths = JsonConvert.DeserializeObject<GamesSavePaths>(json);
                 string savesRoot = Path.Combine(globalDirectory, "Game Saves");
                 Directory.CreateDirectory(savesRoot);

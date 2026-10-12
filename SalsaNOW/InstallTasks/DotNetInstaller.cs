@@ -118,7 +118,7 @@ namespace SalsaNOW
                 {
                     using (var wc = new WebClient())
                     {
-                        string version = ParseLatestVersion(await wc.DownloadStringTaskAsync(endpoint));
+                        string version = ParseLatestVersion(await wc.DownloadStringWithTimeoutAsync(endpoint));
                         if (!string.IsNullOrEmpty(version))
                             return version;
                     }
@@ -169,7 +169,7 @@ namespace SalsaNOW
                 {
                     using (var wc = new WebClient())
                     {
-                        await wc.DownloadFileTaskAsync(new Uri(url), zipPath);
+                        await wc.DownloadFileWithTimeoutAsync(new Uri(url), zipPath);
                     }
 
                     if (IsIntactZip(zipPath))

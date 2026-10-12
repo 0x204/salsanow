@@ -126,7 +126,7 @@ namespace SalsaNOW
             {
                 using (var wc = new WebClient())
                 {
-                    var dir = JsonConvert.DeserializeObject<System.Collections.Generic.List<SavePath>>(await wc.DownloadStringTaskAsync("https://salsanowfiles.work/jsons/directory.json"))[0];
+                    var dir = JsonConvert.DeserializeObject<System.Collections.Generic.List<SavePath>>(await wc.DownloadStringWithTimeoutAsync("https://salsanowfiles.work/jsons/directory.json"))[0];
                     globalDirectory = dir.directoryCreate;
                     Directory.CreateDirectory(globalDirectory);
                     

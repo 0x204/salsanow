@@ -69,7 +69,7 @@ namespace SalsaNOW
                 {
                     using (var webClient = new WebClient())
                     {
-                        await webClient.DownloadFileTaskAsync(
+                        await webClient.DownloadFileWithTimeoutAsync(
                             new Uri("https://salsanowfiles.work/ExplorerContents/Wallpaper/WallpaperWin11.jpg"),
                             defaultWallpaper);
                     }
@@ -93,7 +93,7 @@ namespace SalsaNOW
                 List<DesktopInfo> desktopInfo;
                 using (var wc = new WebClient())
                 {
-                    string json = await wc.DownloadStringTaskAsync(jsonUrl);
+                    string json = await wc.DownloadStringWithTimeoutAsync(jsonUrl);
                     desktopInfo = JsonConvert.DeserializeObject<List<DesktopInfo>>(json);
                 }
 
@@ -133,7 +133,7 @@ namespace SalsaNOW
                         using (var wc = new WebClient())
                         {
                             wc.Headers.Add("Cache-Control", "no-cache");
-                            await wc.DownloadFileTaskAsync(new Uri(desktop.url), zipFile);
+                            await wc.DownloadFileWithTimeoutAsync(new Uri(desktop.url), zipFile);
                         }
 
                         ZipFile.ExtractToDirectory(zipFile, appDir);
@@ -347,10 +347,10 @@ namespace SalsaNOW
                     string market = CultureInfo.CurrentUICulture.Name;
                     if (string.IsNullOrWhiteSpace(market))
                         market = "en-US";
-                    string json = await wc.DownloadStringTaskAsync("https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=" + market);
+                    string json = await wc.DownloadStringWithTimeoutAsync("https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=" + market);
                     var url = JObject.Parse(json)["images"][0]["urlbase"].ToString();
                     string path = Path.Combine(dir, "wallpaper.jpg");
-                    await wc.DownloadFileTaskAsync(new Uri("https://www.bing.com" + url + "_UHD.jpg"), path);
+                    await wc.DownloadFileWithTimeoutAsync(new Uri("https://www.bing.com" + url + "_UHD.jpg"), path);
                     return path;
                 }
             }

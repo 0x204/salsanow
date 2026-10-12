@@ -23,7 +23,7 @@ namespace SalsaNOW
                 List<Apps> apps;
                 using (var wc = new WebClient())
                 {
-                    string json = await wc.DownloadStringTaskAsync(jsonUrl);
+                    string json = await wc.DownloadStringWithTimeoutAsync(jsonUrl);
                     apps = JsonConvert.DeserializeObject<List<Apps>>(json);
                 }
 
@@ -55,7 +55,7 @@ namespace SalsaNOW
                         if (isExe)
                         {
                             SalsaLogger.Info("Downloading " + app.name);
-                            await webClient.DownloadFileTaskAsync(new Uri(app.url), appExePath);
+                            await webClient.DownloadFileWithTimeoutAsync(new Uri(app.url), appExePath);
                             if (ShouldCreateDesktopShortcut(globalDirectory, desktopPath))
                                 CreateShortcut(app.name, desktopPath, appExePath, globalDirectory);
                             if (app.run == "true") Process.Start(appExePath);
@@ -80,7 +80,7 @@ namespace SalsaNOW
                             SafeDeleteDirectory(appDir);
 
                             string zipPath = $"{appDir}.zip";
-                            await webClient.DownloadFileTaskAsync(new Uri(app.url), zipPath);
+                            await webClient.DownloadFileWithTimeoutAsync(new Uri(app.url), zipPath);
                             ZipFile.ExtractToDirectory(zipPath, appDir);
                             System.IO.File.Delete(zipPath);
 
@@ -114,7 +114,7 @@ namespace SalsaNOW
                 List<SilentApps> apps;
                 using (var wc = new WebClient())
                 {
-                    string json = await wc.DownloadStringTaskAsync(jsonUrl);
+                    string json = await wc.DownloadStringWithTimeoutAsync(jsonUrl);
                     apps = JsonConvert.DeserializeObject<List<SilentApps>>(json);
                 }
 
@@ -179,7 +179,7 @@ namespace SalsaNOW
                             string zip = $"{appFolder}.zip";
                             if (!Directory.Exists(appFolder)) Directory.CreateDirectory(appFolder);
 
-                            await webClient.DownloadFileTaskAsync(new Uri(app.url), zip);
+                            await webClient.DownloadFileWithTimeoutAsync(new Uri(app.url), zip);
                             ZipFile.ExtractToDirectory(zip, appFolder);
                             System.IO.File.Delete(zip);
                             WriteVersionMarker(versionMarkerFile, versionKey);
@@ -188,7 +188,7 @@ namespace SalsaNOW
                         }
                         else
                         {
-                            await webClient.DownloadFileTaskAsync(new Uri(app.url), appPath);
+                            await webClient.DownloadFileWithTimeoutAsync(new Uri(app.url), appPath);
                             WriteVersionMarker(versionMarkerFile, versionKey);
 
                             if (app.run == "true")

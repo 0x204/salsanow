@@ -114,7 +114,7 @@ namespace SalsaNOW
             {
                 using (var wc = new WebClient())
                 {
-                    var dir = JsonConvert.DeserializeObject<System.Collections.Generic.List<SavePath>>(await wc.DownloadStringTaskAsync("https://salsanowfiles.work/jsons/directory.json"))[0];
+                    var dir = JsonConvert.DeserializeObject<System.Collections.Generic.List<SavePath>>(await wc.DownloadStringWithTimeoutAsync("https://salsanowfiles.work/jsons/directory.json"))[0];
                     globalDirectory = Path.GetFullPath(dir.directoryCreate);
                 }
             }
@@ -211,7 +211,7 @@ namespace SalsaNOW
                 using (var wc = new WebClient())
                 {
                     var dir = JsonConvert.DeserializeObject<List<SavePath>>(
-                        await wc.DownloadStringTaskAsync("https://salsanowfiles.work/jsons/directory.json"))[0];
+                        await wc.DownloadStringWithTimeoutAsync("https://salsanowfiles.work/jsons/directory.json"))[0];
 
                     globalDirectory = dir.directoryCreate;
 
@@ -224,7 +224,7 @@ namespace SalsaNOW
                         return;
                     }
 
-                    string json = await wc.DownloadStringTaskAsync(jsonUrl);
+                    string json = await wc.DownloadStringWithTimeoutAsync(jsonUrl);
                     var apps = JsonConvert.DeserializeObject<List<Apps>>(json);
 
                     foreach (var app in apps)
@@ -333,7 +333,7 @@ namespace SalsaNOW
 
                 using (var wc = new WebClient())
                 {
-                    await wc.DownloadFileTaskAsync(
+                    await wc.DownloadFileWithTimeoutAsync(
                         new Uri("https://salsanowfiles.work/exes/Explorer%2B%2B.exe"),
                         destination);
                 }
@@ -367,7 +367,7 @@ namespace SalsaNOW
 
                 using (var wc = new WebClient())
                 {
-                    await wc.DownloadFileTaskAsync(
+                    await wc.DownloadFileWithTimeoutAsync(
                         new Uri("https://salsanowfiles.work/zips/System.Informer.zip"),
                         zipPath);
                 }

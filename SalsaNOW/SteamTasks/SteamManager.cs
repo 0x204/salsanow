@@ -125,7 +125,7 @@ namespace SalsaNOW
                 Directory.CreateDirectory(directory);
 
             using (var client = new WebClient())
-                await client.DownloadFileTaskAsync(new Uri(url), destination);
+                await client.DownloadFileWithTimeoutAsync(new Uri(url), destination);
         }
 
         private static async Task ApplySteamInput(bool enabled)
