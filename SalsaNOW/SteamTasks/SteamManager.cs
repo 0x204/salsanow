@@ -105,6 +105,9 @@ namespace SalsaNOW
             }))
             {
                 copy?.WaitForExit();
+
+                if (copy != null && copy.ExitCode >= 8)
+                    throw new IOException($"Copying steamui failed (robocopy exit code {copy.ExitCode}).");
             }
 
             string copiedChunk = Path.Combine(steamUiOg, "chunk~2dcc5aaf7.js");
