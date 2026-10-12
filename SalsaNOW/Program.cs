@@ -85,20 +85,20 @@ namespace SalsaNOW
             // Load configuration once to share settings across modules
             SalsaSettings.Load();
 
-            _ = Task.Run(() => BackgroundTasks.EnvironmentSetup());
+            LogFailures(Task.Run(() => BackgroundTasks.EnvironmentSetup()), "Environment setup");
 
             // Apply registry changes and backup desktop registry
-            _ = AutoPersist.BackupDesktopRegistry(cts.Token, globalDirectory);
-            _ = AutoPersist.ApplyCustomRegistryFiles(globalDirectory);
-            _ = AutoPersist.SetupGameSavesAsync(globalDirectory);
+            LogFailures(AutoPersist.BackupDesktopRegistry(cts.Token, globalDirectory), "Registry backup");
+            LogFailures(AutoPersist.ApplyCustomRegistryFiles(globalDirectory), "Custom registry files");
+            LogFailures(AutoPersist.SetupGameSavesAsync(globalDirectory), "Game saves setup");
 
             // Fire and forget non-blocking background services
-            _ = BackgroundTasks.StartShortcutsSavingAsync(globalDirectory, cts.Token);
-            _ = BackgroundTasks.StartTerminateGFNExplorerShellAsync(cts.Token);
-            _ = BackgroundTasks.StartEacWatcherAsync(cts.Token);
-            _ = BackgroundTasks.StartBrickPreventionAsync(cts.Token);
-            _ = DotNetInstaller.StartDotNetInstallAsync(cts.Token);
-            _ = Task.Run(() => NvidiaManager.EnableRTX());
+            LogFailures(BackgroundTasks.StartShortcutsSavingAsync(globalDirectory, cts.Token), "Shortcut sync");
+            LogFailures(BackgroundTasks.StartTerminateGFNExplorerShellAsync(cts.Token), "CustomExplorer watcher");
+            LogFailures(BackgroundTasks.StartEacWatcherAsync(cts.Token), "Easy Anti-Cheat watcher");
+            LogFailures(BackgroundTasks.StartBrickPreventionAsync(cts.Token), "Launch option guard");
+            LogFailures(DotNetInstaller.StartDotNetInstallAsync(cts.Token), ".NET runtime install");
+            LogFailures(Task.Run(() => NvidiaManager.EnableRTX()), "NVIDIA power mode");
 
             Task installs = Task.WhenAll(
                 DesktopInstaller.DesktopInstallAsync(globalDirectory),
@@ -111,6 +111,13 @@ namespace SalsaNOW
             await FinalBackgroundTasks.FinalTasks(globalDirectory, cts.Token);
 
             try { await Task.Delay(Timeout.Infinite, cts.Token); } catch (TaskCanceledException) { }
+        }
+
+        private static void LogFailures(Task task, string name)
+        {
+            task.ContinueWith(
+                t => SalsaLogger.Error($"{name} failed: {t.Exception.GetBaseException().Message}"),
+                TaskContinuationOptions.OnlyOnFaulted);
         }
 
         static async Task Startup()
